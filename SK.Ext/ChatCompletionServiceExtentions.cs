@@ -54,8 +54,75 @@ public readonly struct CallingLLM : IContentResult
     public required bool IsStreamed { get; init; }
 }
 
+public readonly struct CallingLLMExceptionResult : IContentResult
+{
+    public required Exception Exception { get; init; }
+    public required bool IsStreamed { get; init; }
+}
+
 public static class ChatCompletionServiceExtentions
 {
+    private struct ChatCompletionResult
+    {
+        public StreamingChatMessageContent? Content { get; set; }
+        public Exception? Exception { get; set; }
+    }
+
+    private static async IAsyncEnumerable<ChatCompletionResult> GetStreamedChatCompletionResult(
+        this IChatCompletionService chatCompletionService,
+        ChatHistory chatHistory,
+        PromptExecutionSettings settings,
+        Kernel kernel,
+        [EnumeratorCancellation] CancellationToken token = default)
+    {
+        var asyncEnumerable = chatCompletionService.GetStreamingChatMessageContentsAsync(chatHistory, settings, kernel, token);
+        var enumerator = asyncEnumerable.GetAsyncEnumerator(token);
+        try
+        {
+            while (true)
+            {
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                ChatCompletionResult result;
+                try
+                {
+                    var moveNext = await enumerator.MoveNextAsync();
+
+                    if (!moveNext)
+                    {
+                        break;
+                    }
+                    var streamingChatMessageContent = enumerator.Current;
+                    result = new ChatCompletionResult
+                    {
+                        Content = streamingChatMessageContent,
+                        Exception = null
+                    };
+                }
+                catch (Exception ex)
+                {
+                    result = new ChatCompletionResult
+                    {
+                        Content = null,
+                        Exception = ex
+                    };
+                }
+
+                yield return result;
+            }
+        }
+        finally
+        {
+            await enumerator.DisposeAsync();
+        }
+    }
+
     public static async IAsyncEnumerable<IContentResult> StreamChatMessagesWithFunctions(this IChatCompletionService chatCompletionService,
         Kernel kernel,
         ChatHistory chatHistory,
@@ -71,8 +138,18 @@ public static class ChatCompletionServiceExtentions
 
             // TODO should we inform about max content exceeded?
             yield return new CallingLLM { IsStreamed = true };
-            await foreach (var streamingContent in chatCompletionService.GetStreamingChatMessageContentsAsync(chatHistory, settings, kernel, token))
+            await foreach (var chatCompletionResult in chatCompletionService.GetStreamedChatCompletionResult(chatHistory, settings, kernel, token))
             {
+                if (chatCompletionResult.Exception is not null)
+                {
+                    yield return new CallingLLMExceptionResult { Exception = chatCompletionResult.Exception, IsStreamed = true };
+                    break;
+                }
+                var streamingContent = chatCompletionResult.Content;
+                if (streamingContent is null)
+                {
+                    yield break;
+                }
                 if (streamingContent.Content is not null)
                 {
                     yield return new TextResult { Text = streamingContent.Content };
@@ -178,7 +255,25 @@ public static class ChatCompletionServiceExtentions
 
             yield return new CallingLLM { IsStreamed = false };
 
-            var result = await chatCompletionService.GetChatMessageContentAsync(chatHistory, settings, kernel);
+            Microsoft.SemanticKernel.ChatMessageContent? result = null;
+            Exception? catchedException = null;
+            try
+            {
+                result = await chatCompletionService.GetChatMessageContentAsync(chatHistory, settings, kernel, token);
+            }
+            catch (Exception ex)
+            {
+                catchedException = ex;
+            }
+            if (catchedException is not null)
+            {
+                yield return new CallingLLMExceptionResult { Exception = catchedException, IsStreamed = false };
+                break;
+            }
+            if (result is null)
+            {
+                yield break;
+            }
             if (result.Content is not null)
             {
                 yield return new TextResult { Text = result.Content };

@@ -5,11 +5,20 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>SK_Ext</PackageId>
+    <Version>1.0.3</Version>
+    <Authors>Yauhen_Pyl</Authors>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <RepositoryUrl>https://github.com/ypyl/sk_ext</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SemanticKernel" Version="1.40.1" />
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.40.1-alpha" />
+    <PackageReference Include="Microsoft.SemanticKernel" Version="1.45.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 </Project>

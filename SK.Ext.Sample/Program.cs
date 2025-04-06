@@ -6,11 +6,8 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using SK.Ext;
 
 var builder = Kernel.CreateBuilder();
-// builder.AddOpenAIChatCompletion("llama-3.3-70b-versatile",
-//     new OpenAI.OpenAIClient(new ApiKeyCredential("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"), new OpenAI.OpenAIClientOptions { Endpoint = new Uri("https://api.groq.com/openai/v1") }));
-#pragma warning disable SKEXP0070
-builder.AddOllamaChatCompletion("phi4-mini", new Uri("http://localhost:11434/"));
-#pragma warning restore SKEXP0070
+builder.AddOpenAIChatCompletion("llama-3.3-70b-versatile",
+    new OpenAI.OpenAIClient(new ApiKeyCredential("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"), new OpenAI.OpenAIClientOptions { Endpoint = new Uri("https://api.groq.com/openai/v1") }));
 builder.Services.AddLogging(c => c.SetMinimumLevel(LogLevel.Trace));
 Kernel kernel = builder.Build();
 
@@ -40,6 +37,8 @@ chatHistory.AddUserMessage("What is the weather in Boston today?");
 
 PromptExecutionSettings settings = new() { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(autoInvoke: false) };
 
+var taskId = 0;
+
 await foreach (var content in chatCompletionService.StreamChatMessagesWithFunctions(kernel, chatHistory, settings))
 {
     Console.Write(content switch
@@ -48,33 +47,35 @@ await foreach (var content in chatCompletionService.StreamChatMessagesWithFuncti
             => $"{streamedTextResult.Text}",
 
         CallingLLM callingLLM
-            => $"[Calling LLM] Streamed: {callingLLM.IsStreamed}\n",
+            => $"[Calling LLM {taskId}] Streamed: {callingLLM.IsStreamed}\n",
 
         FunctionCall functionCall
-            => $"[Function Call] {functionCall.FunctionName}\n" +
+            => $"[Function Call {taskId}] {functionCall.FunctionName}\n" +
                string.Join("\n", (functionCall.Arguments ?? new Dictionary<string, object?>()).Select(arg => $"{arg.Key}: {arg.Value}")) +
                (functionCall.Arguments?.Any() == true ? "\n" : string.Empty),
 
         FunctionExceptionResult functionExceptionResult
-            => $"[Exception] {functionExceptionResult.Exception.Message}\n",
+            => $"[Exception {taskId}] {functionExceptionResult.Exception.Message}\n",
 
         FunctionExecutionResult functionResult
-            => $"[Result] {functionResult.Result?.ToString() ?? string.Empty}\n",
+            => $"[Result {taskId}] {functionResult.Result?.ToString() ?? string.Empty}\n",
 
         UsageResult usageResult
-            => $"[Usage] Input Tokens: {usageResult.InputTokenCount}, Output Tokens: {usageResult.OutputTokenCount}, Total Tokens: {usageResult.TotalTokenCount}\n",
+            => $"[Usage {taskId}] Input Tokens: {usageResult.InputTokenCount}, Output Tokens: {usageResult.OutputTokenCount}, Total Tokens: {usageResult.TotalTokenCount}\n",
 
         IterationResult iterationResult
-            => $"[Iteration] Iteration: {iterationResult.Iteration}, Is Streamed: {iterationResult.IsStreamed}, Function Calls: {string.Join(", ", iterationResult.FunctionCalls.Select(fc => fc.FunctionName))}\n",
+            => $"[Iteration {taskId}] Iteration: {iterationResult.Iteration}, Is Streamed: {iterationResult.IsStreamed}, Function Calls: {string.Join(", ", iterationResult.FunctionCalls.Select(fc => fc.FunctionName))}\n",
 
+        CallingLLMExceptionResult callingLLMExceptionResult
+            => $"[Calling LLM Exception {taskId}] {callingLLMExceptionResult.Exception.Message}\n",
         _ => string.Empty
     });
 
     if (content is FunctionExecutionResult fr)
     {
-        if (fr.FunctionName == "GetWeatherForCity")
+        if (fr.FunctionName == "GetWeatherForCity" && taskId == 0)
         {
-            chatHistory.ReplaceFunctionCallResult(fr.Id, "70 and sunny");
+            chatHistory.ReplaceFunctionCallResult(fr.Id, "50 and sunny");
         }
     }
 }

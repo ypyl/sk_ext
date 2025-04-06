@@ -10,8 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.2" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.2" />
-    <PackageReference Include="Microsoft.SemanticKernel" Version="1.40.1" />
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.40.1-alpha" />
+    <PackageReference Include="Microsoft.SemanticKernel" Version="1.45.0" />
   </ItemGroup>
 
   <ItemGroup>
