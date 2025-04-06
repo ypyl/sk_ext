@@ -46,7 +46,7 @@ public class ChatCompletionServiceExtentionsTests
         ]);
         var chatHistory = new ChatHistory();
         var settings = new PromptExecutionSettings();
-        var streamingContentWithFunc = new StreamingChatMessageContent(AuthorRole.User, "Hello");
+        var streamingContentWithFunc = new StreamingChatMessageContent(AuthorRole.Assistant, "Hello");
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         var functionCall = new StreamingFunctionCallUpdateContent
         {
@@ -60,7 +60,7 @@ public class ChatCompletionServiceExtentionsTests
         streamingContentWithFunc.Items.Add(functionCall);
         var asyncEnumerableWithFunc = GetAsyncEnumerable(streamingContentWithFunc);
 
-        var streamingContent = new StreamingChatMessageContent(AuthorRole.User, "Hello");
+        var streamingContent = new StreamingChatMessageContent(AuthorRole.Assistant, "Hello");
         var asyncEnumerable = GetAsyncEnumerable(streamingContent);
 
         A.CallTo(() => fakeChatCompletionService.GetStreamingChatMessageContentsAsync(chatHistory, settings, kernel, default))
@@ -132,7 +132,7 @@ public class ChatCompletionServiceExtentionsTests
 
         // Return an async enumerable that throws
         var faultyStream = GetFaultyAsyncEnumerable<StreamingChatMessageContent>(
-            new StreamingChatMessageContent(AuthorRole.User, "Before Exception"),
+            new StreamingChatMessageContent(AuthorRole.Assistant, "Before Exception"),
             new InvalidOperationException("Simulated streaming failure"));
 
         A.CallTo(() => chatCompletionService.GetStreamingChatMessageContentsAsync(
@@ -153,6 +153,56 @@ public class ChatCompletionServiceExtentionsTests
         Assert.True(exceptionResult.IsStreamed);
         Assert.IsType<InvalidOperationException>(exceptionResult.Exception);
         Assert.Equal("Simulated streaming failure", exceptionResult.Exception.Message);
+    }
+
+    [Fact]
+    public async Task StreamChatMessagesWithFunctions_ShouldFallbackToSync_WhenStreamingReturnsEmptyResponse()
+    {
+        // Arrange
+        var fakeChatCompletionService = A.Fake<IChatCompletionService>();
+        var kernel = new Kernel();
+        var chatHistory = new ChatHistory();
+        var settings = new PromptExecutionSettings();
+
+        // Empty streaming response
+        var emptyStreamingContent = new StreamingChatMessageContent(AuthorRole.Assistant, "");
+        var emptyAsyncEnumerable = GetAsyncEnumerable(emptyStreamingContent);
+
+        // Sync response with actual content
+        var syncContent = new ChatMessageContent(AuthorRole.Assistant, "Sync Response");
+
+        A.CallTo(() => fakeChatCompletionService.GetStreamingChatMessageContentsAsync(
+                A<ChatHistory>._, A<PromptExecutionSettings>._, A<Kernel>._, A<CancellationToken>._))
+            .Returns(emptyAsyncEnumerable);
+
+        A.CallTo(() => fakeChatCompletionService.GetChatMessageContentsAsync(
+                A<ChatHistory>._, A<PromptExecutionSettings>._, A<Kernel>._, A<CancellationToken>._))
+            .Returns([syncContent]);
+
+        // Act
+        var results = new List<IContentResult>();
+        await foreach (var result in fakeChatCompletionService.GetStreamingChatMessageContentsWithFunctions(kernel, chatHistory, settings))
+        {
+            results.Add(result);
+        }
+
+        // Assert
+        var callingLLMs = results.OfType<CallingLLM>().ToList();
+        Assert.Equal(2, callingLLMs.Count);
+        Assert.True(callingLLMs[0].IsStreamed);
+        Assert.False(callingLLMs[1].IsStreamed);
+
+        var textResults = results.OfType<TextResult>().ToList();
+        Assert.Equal(2, textResults.Count);
+        Assert.Equal(string.Empty, textResults[0].Text);
+        Assert.Equal("Sync Response", textResults[1].Text);
+
+        var iterations = results.OfType<IterationResult>().ToList();
+        Assert.Equal(2, iterations.Count);
+        Assert.True(iterations[0].IsStreamed);
+        Assert.True(iterations[0].IsEmptyResponse);
+        Assert.False(iterations[1].IsStreamed);
+        Assert.False(iterations[1].IsEmptyResponse);
     }
 
     private async IAsyncEnumerable<T> GetFaultyAsyncEnumerable<T>(T beforeException, Exception exception)

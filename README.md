@@ -57,6 +57,13 @@ chatHistory.ReplaceFunctionCallResult("callId", new { Result = "result" });
 chatHistory.RemoveDuplicatedFunctionCallResults();
 ```
 
+## Tests
+
+```
+dotnet test --collect:"XPlat Code Coverage"
+reportgenerator -reports:"C:\Users\ypyl\projects\sk_ext\SK.Ext.Tests\TestResults\3bb95689-3922-43e8-ad10-464ceba125fd\coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:Html
+```
+
 ## License
 
 This project is licensed under the MIT License.
