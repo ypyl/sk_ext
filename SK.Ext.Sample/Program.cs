@@ -56,7 +56,8 @@ static async IAsyncEnumerable<IContentResult> SetUpWeatherAssistantKernel(string
 {
     var builder = Kernel.CreateBuilder();
     builder.AddOpenAIChatCompletion("llama-3.3-70b-versatile",
-        new OpenAI.OpenAIClient(new ApiKeyCredential("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"), new OpenAI.OpenAIClientOptions { Endpoint = new Uri("https://api.groq.com/openai/v1") }));
+        // Sample groq API key (revoked), replace with your own
+        new OpenAI.OpenAIClient(new ApiKeyCredential("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"), new OpenAI.OpenAIClientOptions { Endpoint = new Uri("https://api.groq.com/openai/v1") }));
     builder.Services.AddLogging(c => c.SetMinimumLevel(LogLevel.Trace));
     Kernel kernel = builder.Build();
 
@@ -132,16 +133,7 @@ static async IAsyncEnumerable<(int taskId, T item)> MergeWithTaskId<T>(
         // When Task.WhenAll completes, t.Exception will be an AggregateException
         // containing all the exceptions that were thrown by the tasks
         // If any task failed, t.Exception will not be null
-        if (t.Exception != null)
-        {
-            // We have at least one exception from the tasks
-            channel.Writer.TryComplete(t.Exception.Flatten());
-        }
-        else
-        {
-            // All tasks completed successfully
-            channel.Writer.TryComplete();
-        }
+        channel.Writer.TryComplete(t.Exception?.Flatten());
     }, cancellationToken);
 
     await foreach (var item in channel.Reader.ReadAllAsync(cancellationToken))
