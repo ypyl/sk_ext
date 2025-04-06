@@ -23,7 +23,7 @@ public class ChatCompletionServiceExtentionsTests
 
         // Act
         var results = new List<IContentResult>();
-        await foreach (var result in fakeChatCompletionService.StreamChatMessagesWithFunctions(kernel, chatHistory, settings))
+        await foreach (var result in fakeChatCompletionService.GetStreamingChatMessageContentsWithFunctions(kernel, chatHistory, settings))
         {
             results.Add(result);
         }
@@ -68,7 +68,7 @@ public class ChatCompletionServiceExtentionsTests
 
         // Act
         var results = new List<IContentResult>();
-        await foreach (var result in fakeChatCompletionService.StreamChatMessagesWithFunctions(kernel, chatHistory, settings))
+        await foreach (var result in fakeChatCompletionService.GetStreamingChatMessageContentsWithFunctions(kernel, chatHistory, settings))
         {
             results.Add(result);
         }
@@ -111,7 +111,7 @@ public class ChatCompletionServiceExtentionsTests
 
         // Act
         var results = new List<IContentResult>();
-        await foreach (var result in fakeChatCompletionService.StreamChatMessagesWithFunctions(kernel, chatHistory, settings))
+        await foreach (var result in fakeChatCompletionService.GetStreamingChatMessageContentsWithFunctions(kernel, chatHistory, settings))
         {
             results.Add(result);
         }
@@ -141,7 +141,7 @@ public class ChatCompletionServiceExtentionsTests
 
         // Act
         var results = new List<IContentResult>();
-        await foreach (var result in chatCompletionService.StreamChatMessagesWithFunctions(kernel, chatHistory, settings, token))
+        await foreach (var result in chatCompletionService.GetStreamingChatMessageContentsWithFunctions(kernel, chatHistory, settings, token))
         {
             results.Add(result);
         }

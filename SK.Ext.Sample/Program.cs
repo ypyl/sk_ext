@@ -86,7 +86,7 @@ static async IAsyncEnumerable<IContentResult> SetUpWeatherAssistantKernel(string
 
     PromptExecutionSettings settings = new() { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(autoInvoke: false) };
 
-    await foreach (var content in chatCompletionService.StreamChatMessagesWithFunctions(kernel, chatHistory, settings, cancellationToken))
+    await foreach (var content in chatCompletionService.GetStreamingChatMessageContentsWithFunctions(kernel, chatHistory, settings, cancellationToken))
     {
         yield return content;
         if (content is FunctionExecutionResult fr)

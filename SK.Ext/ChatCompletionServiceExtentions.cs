@@ -119,7 +119,7 @@ public static class ChatCompletionServiceExtentions
         }
     }
 
-    public static async IAsyncEnumerable<IContentResult> StreamChatMessagesWithFunctions(this IChatCompletionService chatCompletionService,
+    public static async IAsyncEnumerable<IContentResult> GetStreamingChatMessageContentsWithFunctions(this IChatCompletionService chatCompletionService,
         Kernel kernel,
         ChatHistory chatHistory,
         PromptExecutionSettings settings,
