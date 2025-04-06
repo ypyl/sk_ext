@@ -54,6 +54,16 @@ public readonly struct CallingLLM : IContentResult
     public required bool IsStreamed { get; init; }
 }
 
+public readonly struct CallingLLMStreamedResult : IContentResult
+{
+    public required StreamingChatMessageContent Result { get; init; }
+}
+
+public readonly struct CallingLLMResult : IContentResult
+{
+    public required Microsoft.SemanticKernel.ChatMessageContent Result { get; init; }
+}
+
 public readonly struct CallingLLMExceptionResult : IContentResult
 {
     public required Exception Exception { get; init; }
@@ -62,13 +72,7 @@ public readonly struct CallingLLMExceptionResult : IContentResult
 
 public static class ChatCompletionServiceExtentions
 {
-    private struct ChatCompletionResult
-    {
-        public StreamingChatMessageContent? Content { get; set; }
-        public Exception? Exception { get; set; }
-    }
-
-    private static async IAsyncEnumerable<ChatCompletionResult> GetStreamedChatCompletionResult(
+    private static async IAsyncEnumerable<IContentResult> GetStreamedChatCompletionResult(
         this IChatCompletionService chatCompletionService,
         ChatHistory chatHistory,
         PromptExecutionSettings settings,
@@ -89,7 +93,7 @@ public static class ChatCompletionServiceExtentions
                 {
                     break;
                 }
-                ChatCompletionResult result;
+                IContentResult result;
                 try
                 {
                     var moveNext = await enumerator.MoveNextAsync();
@@ -99,19 +103,11 @@ public static class ChatCompletionServiceExtentions
                         break;
                     }
                     var streamingChatMessageContent = enumerator.Current;
-                    result = new ChatCompletionResult
-                    {
-                        Content = streamingChatMessageContent,
-                        Exception = null
-                    };
+                    result = new CallingLLMStreamedResult { Result = streamingChatMessageContent };
                 }
                 catch (Exception ex)
                 {
-                    result = new ChatCompletionResult
-                    {
-                        Content = null,
-                        Exception = ex
-                    };
+                    result = new CallingLLMExceptionResult { Exception = ex, IsStreamed = true };
                 }
 
                 yield return result;
@@ -138,39 +134,37 @@ public static class ChatCompletionServiceExtentions
 
             // TODO should we inform about max content exceeded?
             yield return new CallingLLM { IsStreamed = true };
-            await foreach (var chatCompletionResult in chatCompletionService.GetStreamedChatCompletionResult(chatHistory, settings, kernel, token))
+            await foreach (var chatCompletionStreamedResult in chatCompletionService.GetStreamedChatCompletionResult(chatHistory, settings, kernel, token))
             {
-                if (chatCompletionResult.Exception is not null)
+                if (chatCompletionStreamedResult is CallingLLMStreamedResult streamingChatMessageContent)
                 {
-                    yield return new CallingLLMExceptionResult { Exception = chatCompletionResult.Exception, IsStreamed = true };
-                    break;
-                }
-                var streamingContent = chatCompletionResult.Content;
-                if (streamingContent is null)
-                {
-                    yield break;
-                }
-                if (streamingContent.Content is not null)
-                {
-                    yield return new TextResult { Text = streamingContent.Content };
-                    responseStringBuilder.Append(streamingContent.Content);
-                }
-                authorRole ??= streamingContent.Role;
-                fccBuilder.Append(streamingContent);
-
-                if (streamingContent.Metadata is not null)
-                {
-                    var outputTokens = GetOutputTokensFromMetadata(streamingContent.Metadata);
-                    if (outputTokens is not null)
+                    if (streamingChatMessageContent.Result.Content is not null)
                     {
-                        yield return new UsageResult
-                        {
-                            IsStreamed = true,
-                            OutputTokenCount = outputTokens.OutputTokenCount,
-                            InputTokenCount = outputTokens.InputTokenCount,
-                            TotalTokenCount = outputTokens.TotalTokenCount
-                        };
+                        responseStringBuilder.Append(streamingChatMessageContent.Result.Content);
+                        yield return new TextResult { Text = streamingChatMessageContent.Result.Content };
                     }
+                    authorRole ??= streamingChatMessageContent.Result.Role;
+                    fccBuilder.Append(streamingChatMessageContent.Result);
+
+                    if (streamingChatMessageContent.Result.Metadata is not null)
+                    {
+                        var outputTokens = GetOutputTokensFromMetadata(streamingChatMessageContent.Result.Metadata);
+                        if (outputTokens is not null)
+                        {
+                            yield return new UsageResult
+                            {
+                                IsStreamed = true,
+                                OutputTokenCount = outputTokens.OutputTokenCount,
+                                InputTokenCount = outputTokens.InputTokenCount,
+                                TotalTokenCount = outputTokens.TotalTokenCount
+                            };
+                        }
+                    }
+                }
+                else if (chatCompletionStreamedResult is CallingLLMExceptionResult exceptionResult)
+                {
+                    yield return exceptionResult;
+                    break;
                 }
             }
 
@@ -187,57 +181,63 @@ public static class ChatCompletionServiceExtentions
                 break;
             }
 
-            var fcContent = new Microsoft.SemanticKernel.ChatMessageContent(role: authorRole ?? default, content: null);
-            chatHistory.Add(fcContent);
-
-            foreach (var functionCall in functionCalls)
+            if (authorRole is not null)
             {
-                fcContent.Items.Add(functionCall);
-                yield return new FunctionCall { FunctionName = functionCall.FunctionName, Id = functionCall.Id, Arguments = functionCall.Arguments };
-                // user can remove function call from chat history
-                // user removed all function calls
-                if (!chatHistory.Contains(fcContent)) break;
-                // user removed this function call
-                if (!fcContent.Items.Contains(functionCall)) continue;
+                var fcContent = new Microsoft.SemanticKernel.ChatMessageContent(role: authorRole ?? default, content: null);
+                chatHistory.Add(fcContent);
 
-                FunctionResultContent functionResult;
-                try
+                foreach (var functionCall in functionCalls)
                 {
-                    functionResult = await functionCall.InvokeAsync(kernel, token);
-                }
-                catch (Exception ex)
-                {
-                    functionResult = new FunctionResultContent(functionCall, ex);
-                }
+                    fcContent.Items.Add(functionCall);
+                    yield return new FunctionCall { FunctionName = functionCall.FunctionName, Id = functionCall.Id, Arguments = functionCall.Arguments };
+                    // user can remove function call from chat history
+                    // user removed all function calls
+                    if (!chatHistory.Contains(fcContent)) break;
+                    // user removed this function call
+                    if (!fcContent.Items.Contains(functionCall)) continue;
 
-                chatHistory.Add(functionResult.ToChatMessage());
-                if (functionResult.Result is Exception exception)
-                {
-                    yield return new FunctionExceptionResult { Id = functionResult.CallId, Exception = exception };
-                }
-                else
-                {
-                    yield return new FunctionExecutionResult
+                    FunctionResultContent functionResult;
+                    try
                     {
-                        Id = functionResult.CallId,
-                        Result = functionResult.Result,
-                        FunctionName = functionResult.FunctionName,
-                        PluginName = functionResult.PluginName
-                    };
+                        functionResult = await functionCall.InvokeAsync(kernel, token);
+                    }
+                    catch (Exception ex)
+                    {
+                        functionResult = new FunctionResultContent(functionCall, ex);
+                    }
+
+                    chatHistory.Add(functionResult.ToChatMessage());
+                    if (functionResult.Result is Exception exception)
+                    {
+                        yield return new FunctionExceptionResult { Id = functionResult.CallId, Exception = exception };
+                    }
+                    else
+                    {
+                        yield return new FunctionExecutionResult
+                        {
+                            Id = functionResult.CallId,
+                            Result = functionResult.Result,
+                            FunctionName = functionResult.FunctionName,
+                            PluginName = functionResult.PluginName
+                        };
+                    }
                 }
-            }
 
-            if (functionCalls.Any())
-            {
-                yield return new IterationResult
+                if (functionCalls.Any())
                 {
-                    Iteration = iteration,
-                    IsStreamed = true,
-                    FunctionCalls = functionCalls.Select(fc => new FunctionCall { FunctionName = fc.FunctionName, Id = fc.Id, Arguments = fc.Arguments }).ToArray()
-                };
+                    yield return new IterationResult
+                    {
+                        Iteration = iteration,
+                        IsStreamed = true,
+                        FunctionCalls = functionCalls.Select(fc => new FunctionCall { FunctionName = fc.FunctionName, Id = fc.Id, Arguments = fc.Arguments }).ToArray()
+                    };
 
-                iteration += 1;
-                continue;
+                    iteration += 1;
+                    continue;
+                }
+
+                // not clear what to do with this case
+                // go to the synchronous completion
             }
 
             if (!IsEmptyResponse(responseStringBuilder))
@@ -255,94 +255,101 @@ public static class ChatCompletionServiceExtentions
 
             yield return new CallingLLM { IsStreamed = false };
 
-            Microsoft.SemanticKernel.ChatMessageContent? result = null;
-            Exception? catchedException = null;
+            IContentResult result;
             try
             {
-                result = await chatCompletionService.GetChatMessageContentAsync(chatHistory, settings, kernel, token);
+                result = new CallingLLMResult { Result = await chatCompletionService.GetChatMessageContentAsync(chatHistory, settings, kernel, token) };
             }
             catch (Exception ex)
             {
-                catchedException = ex;
+                result = new CallingLLMExceptionResult { Exception = ex, IsStreamed = false };
             }
-            if (catchedException is not null)
+
+            if (result is CallingLLMResult callingLLMResult)
             {
-                yield return new CallingLLMExceptionResult { Exception = catchedException, IsStreamed = false };
+                var syncedCallResult = callingLLMResult.Result;
+                if (syncedCallResult.Content is not null)
+                {
+                    yield return new TextResult { Text = syncedCallResult.Content };
+                }
+                if (syncedCallResult.Metadata is not null)
+                {
+                    var outputTokens = GetOutputTokensFromMetadata(syncedCallResult.Metadata);
+                    if (outputTokens is not null)
+                    {
+                        yield return new UsageResult
+                        {
+                            IsStreamed = false,
+                            OutputTokenCount = outputTokens.OutputTokenCount,
+                            InputTokenCount = outputTokens.InputTokenCount,
+                            TotalTokenCount = outputTokens.TotalTokenCount
+                        };
+                    }
+                }
+
+                var syncFunctionCalls = FunctionCallContent.GetFunctionCalls(syncedCallResult);
+                if (!syncFunctionCalls.Any())
+                {
+                    break;
+                }
+
+                chatHistory.Add(syncedCallResult);
+
+                foreach (FunctionCallContent functionCall in syncFunctionCalls)
+                {
+                    yield return new FunctionCall { FunctionName = functionCall.FunctionName, Id = functionCall.Id, Arguments = functionCall.Arguments };
+                    // user can remove function call from chat history
+                    // user removed all function calls
+                    if (!chatHistory.Contains(syncedCallResult)) break;
+                    // user removed this function call
+                    if (!syncedCallResult.Items.Contains(functionCall)) continue;
+                    FunctionResultContent functionResult;
+                    try
+                    {
+                        functionResult = await functionCall.InvokeAsync(kernel, token);
+                    }
+                    catch (Exception ex)
+                    {
+                        functionResult = new FunctionResultContent(functionCall, ex);
+                    }
+                    chatHistory.Add(functionResult.ToChatMessage());
+                    if (functionResult.Result is Exception exception)
+                    {
+                        yield return new FunctionExceptionResult { Id = functionResult.CallId, Exception = exception };
+                    }
+                    else
+                    {
+                        yield return new FunctionExecutionResult
+                        {
+                            Id = functionResult.CallId,
+                            Result = functionResult.Result,
+                            FunctionName = functionResult.FunctionName,
+                            PluginName = functionResult.PluginName
+                        }; ;
+                    }
+                }
+                yield return new IterationResult
+                {
+                    Iteration = iteration,
+                    IsStreamed = false,
+                    FunctionCalls = syncFunctionCalls.Select(fc => new FunctionCall { FunctionName = fc.FunctionName, Id = fc.Id, Arguments = fc.Arguments }).ToArray()
+                };
+
+                iteration += 1;
+            }
+            if (result is CallingLLMExceptionResult callingLLMExceptionResult)
+            {
+                yield return callingLLMExceptionResult;
+                yield return new IterationResult
+                {
+                    Iteration = iteration,
+                    IsStreamed = false,
+                    FunctionCalls = []
+                };
+
+                iteration += 1;
                 break;
             }
-            if (result is null)
-            {
-                yield break;
-            }
-            if (result.Content is not null)
-            {
-                yield return new TextResult { Text = result.Content };
-            }
-            if (result.Metadata is not null)
-            {
-                var outputTokens = GetOutputTokensFromMetadata(result.Metadata);
-                if (outputTokens is not null)
-                {
-                    yield return new UsageResult
-                    {
-                        IsStreamed = false,
-                        OutputTokenCount = outputTokens.OutputTokenCount,
-                        InputTokenCount = outputTokens.InputTokenCount,
-                        TotalTokenCount = outputTokens.TotalTokenCount
-                    };
-                }
-            }
-
-            var syncFunctionCalls = FunctionCallContent.GetFunctionCalls(result);
-            if (!syncFunctionCalls.Any())
-            {
-                break;
-            }
-
-            chatHistory.Add(result);
-
-            foreach (FunctionCallContent functionCall in syncFunctionCalls)
-            {
-                yield return new FunctionCall { FunctionName = functionCall.FunctionName, Id = functionCall.Id, Arguments = functionCall.Arguments };
-                // user can remove function call from chat history
-                // user removed all function calls
-                if (!chatHistory.Contains(result)) break;
-                // user removed this function call
-                if (!result.Items.Contains(functionCall)) continue;
-                FunctionResultContent functionResult;
-                try
-                {
-                    functionResult = await functionCall.InvokeAsync(kernel, token);
-                }
-                catch (Exception ex)
-                {
-                    functionResult = new FunctionResultContent(functionCall, ex);
-                }
-                chatHistory.Add(functionResult.ToChatMessage());
-                if (functionResult.Result is Exception exception)
-                {
-                    yield return new FunctionExceptionResult { Id = functionResult.CallId, Exception = exception };
-                }
-                else
-                {
-                    yield return new FunctionExecutionResult
-                    {
-                        Id = functionResult.CallId,
-                        Result = functionResult.Result,
-                        FunctionName = functionResult.FunctionName,
-                        PluginName = functionResult.PluginName
-                    }; ;
-                }
-            }
-
-            yield return new IterationResult
-            {
-                Iteration = iteration,
-                IsStreamed = false,
-                FunctionCalls = syncFunctionCalls.Select(fc => new FunctionCall { FunctionName = fc.FunctionName, Id = fc.Id, Arguments = fc.Arguments }).ToArray()
-            };
-
-            iteration += 1;
         }
     }
 

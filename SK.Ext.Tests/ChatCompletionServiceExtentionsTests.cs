@@ -120,6 +120,49 @@ public class ChatCompletionServiceExtentionsTests
         Assert.Contains(results, r => r is FunctionExceptionResult);
     }
 
+    [Fact]
+    public async Task GetStreamedChatCompletionResult_ShouldReturnExceptionResult_WhenExceptionOccurs()
+    {
+        // Arrange
+        var chatCompletionService = A.Fake<IChatCompletionService>();
+        var chatHistory = new ChatHistory();
+        var settings = new PromptExecutionSettings();
+        var kernel = new Kernel();
+        var token = CancellationToken.None;
+
+        // Return an async enumerable that throws
+        var faultyStream = GetFaultyAsyncEnumerable<StreamingChatMessageContent>(
+            new StreamingChatMessageContent(AuthorRole.User, "Before Exception"),
+            new InvalidOperationException("Simulated streaming failure"));
+
+        A.CallTo(() => chatCompletionService.GetStreamingChatMessageContentsAsync(
+                A<ChatHistory>._, A<PromptExecutionSettings>._, A<Kernel>._, A<CancellationToken>._))
+            .Returns(faultyStream);
+
+        // Act
+        var results = new List<IContentResult>();
+        await foreach (var result in chatCompletionService.StreamChatMessagesWithFunctions(kernel, chatHistory, settings, token))
+        {
+            results.Add(result);
+        }
+
+        // Assert
+        Assert.Equal(4, results.Count);
+
+        var exceptionResult = Assert.IsType<CallingLLMExceptionResult>(results[2]);
+        Assert.True(exceptionResult.IsStreamed);
+        Assert.IsType<InvalidOperationException>(exceptionResult.Exception);
+        Assert.Equal("Simulated streaming failure", exceptionResult.Exception.Message);
+    }
+
+    private async IAsyncEnumerable<T> GetFaultyAsyncEnumerable<T>(T beforeException, Exception exception)
+    {
+        yield return beforeException;
+        await Task.Delay(10); // Simulate a little delay
+        throw exception;
+    }
+
+
     private async IAsyncEnumerable<StreamingChatMessageContent> GetAsyncEnumerable(params StreamingChatMessageContent[] contents)
     {
         foreach (var content in contents)
