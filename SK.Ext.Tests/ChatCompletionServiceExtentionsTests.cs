@@ -205,6 +205,69 @@ public class ChatCompletionServiceExtentionsTests
         Assert.False(iterations[1].IsEmptyResponse);
     }
 
+    [Fact]
+    public async Task StreamChatMessagesWithFunctions_ShouldHandleStreamedFunctionResult()
+    {
+        // Arrange
+        var fakeChatCompletionService = A.Fake<IChatCompletionService>();
+        var kernel = new Kernel();
+        kernel.ImportPluginFromFunctions("HelperFunctions",
+        [
+            kernel.CreateFunctionFromMethod(() => GetNewsAsync(), "GetLatestNewsTitles", "Retrieves latest news titles."),
+        ]);
+        var chatHistory = new ChatHistory();
+        var settings = new PromptExecutionSettings();
+        var streamingContentWithFunc = new StreamingChatMessageContent(AuthorRole.Assistant, "Hello");
+#pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        var functionCall = new StreamingFunctionCallUpdateContent
+        {
+            CallId = "test-id",
+            Name = "GetLatestNewsTitles",
+            Arguments = "{}",
+            FunctionCallIndex = 0,
+            RequestIndex = 0
+        };
+#pragma warning restore SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        streamingContentWithFunc.Items.Add(functionCall);
+        var asyncEnumerableWithFunc = GetAsyncEnumerable(streamingContentWithFunc);
+
+        var streamingContent = new StreamingChatMessageContent(AuthorRole.User, "Hello");
+        var asyncEnumerable = GetAsyncEnumerable(streamingContent);
+
+        A.CallTo(() => fakeChatCompletionService.GetStreamingChatMessageContentsAsync(chatHistory, settings, kernel, default))
+            .ReturnsNextFromSequence(asyncEnumerableWithFunc, asyncEnumerable);
+
+        // Act
+        var results = new List<IContentResult>();
+        await foreach (var result in fakeChatCompletionService.GetStreamingChatMessageContentsWithFunctions(kernel, chatHistory, settings))
+        {
+            results.Add(result);
+        }
+
+        // Assert
+        var streamedResults = results.OfType<StreamedFunctionExecutionResult>().ToList();
+        var finalResult = results.OfType<FunctionExecutionResult>().Single();
+
+        Assert.Equal(2, streamedResults.Count);
+        Assert.Equal("test-id", streamedResults[0].Id);
+        Assert.Equal("Squirrel Steals Show", streamedResults[0].Result);
+        Assert.Equal("Dog Wins Lottery", streamedResults[1].Result);
+
+        Assert.Equal("test-id", finalResult.Id);
+        Assert.IsType<List<object?>>(finalResult.Result);
+        var finalList = (List<object?>)finalResult.Result;
+        Assert.Equal(2, finalList.Count);
+        Assert.Equal("Squirrel Steals Show", finalList[0]);
+        Assert.Equal("Dog Wins Lottery", finalList[1]);
+    }
+
+    private static async IAsyncEnumerable<string> GetNewsAsync()
+    {
+        yield return "Squirrel Steals Show";
+        await Task.Delay(10); // Simulate network delay
+        yield return "Dog Wins Lottery";
+    }
+
     private async IAsyncEnumerable<T> GetFaultyAsyncEnumerable<T>(T beforeException, Exception exception)
     {
         yield return beforeException;
