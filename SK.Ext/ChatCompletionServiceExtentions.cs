@@ -28,6 +28,14 @@ public readonly struct FunctionExecutionResult : IContentResult
     public required string? PluginName { get; init; }
 }
 
+public readonly struct StreamedFunctionExecutionResult : IContentResult
+{
+    public required string? Id { get; init; }
+    public required object? Result { get; init; }
+    public required string? FunctionName { get; init; }
+    public required string? PluginName { get; init; }
+}
+
 public readonly struct FunctionExceptionResult : IContentResult
 {
     public required string? Id { get; init; }
@@ -266,8 +274,10 @@ public static class ChatCompletionServiceExtentions
                 if (!chatHistory.Contains(fcContent)) break;
                 // user removed this function call
                 if (!fcContent.Items.Contains(functionCall)) continue;
-                var executeFunctionResult = await ExecuteFunctionCall(kernel, chatHistory, functionCall, token);
-                yield return executeFunctionResult;
+                await foreach (var functionExecutionReuslt in ExecuteFunctionCall(kernel, chatHistory, functionCall, token))
+                {
+                    yield return functionExecutionReuslt;
+                }
             }
         }
 
@@ -333,8 +343,10 @@ public static class ChatCompletionServiceExtentions
                     if (!chatHistory.Contains(syncedCallResult)) break;
                     // user removed this function call
                     if (!syncedCallResult.Items.Contains(functionCall)) continue;
-                    var executeFunctionResult = await ExecuteFunctionCall(kernel, chatHistory, functionCall, token);
-                    yield return executeFunctionResult;
+                    await foreach (var functionExecutionReuslt in ExecuteFunctionCall(kernel, chatHistory, functionCall, token))
+                    {
+                        yield return functionExecutionReuslt;
+                    }
                 }
             }
 
@@ -361,7 +373,7 @@ public static class ChatCompletionServiceExtentions
         }
     }
 
-    private static async Task<IContentResult> ExecuteFunctionCall(Kernel kernel, ChatHistory chatHistory, FunctionCallContent functionCall, CancellationToken token)
+    private static async IAsyncEnumerable<IContentResult> ExecuteFunctionCall(Kernel kernel, ChatHistory chatHistory, FunctionCallContent functionCall, CancellationToken token)
     {
         FunctionResultContent functionResult;
         try
@@ -372,18 +384,45 @@ public static class ChatCompletionServiceExtentions
         {
             functionResult = new FunctionResultContent(functionCall, ex);
         }
-        chatHistory.Add(functionResult.ToChatMessage());
         if (functionResult.Result is Exception exception)
         {
-            return new FunctionExceptionResult { Id = functionResult.CallId, Exception = exception };
+            chatHistory.Add(functionResult.ToChatMessage());
+            yield return new FunctionExceptionResult { Id = functionResult.CallId, Exception = exception };
         }
-        return new FunctionExecutionResult
+        if (functionResult.Result is IAsyncEnumerable<object?> functionCallResult)
         {
-            Id = functionResult.CallId,
-            Result = functionResult.Result,
-            FunctionName = functionResult.FunctionName,
-            PluginName = functionResult.PluginName
-        };
+            var finalResult = new List<object?>();
+            await foreach (var item in functionCallResult.WithCancellation(token))
+            {
+                finalResult.Add(item);
+                yield return new StreamedFunctionExecutionResult
+                {
+                    Id = functionResult.CallId,
+                    Result = item,
+                    FunctionName = functionResult.FunctionName,
+                    PluginName = functionResult.PluginName
+                };
+            }
+            chatHistory.Add(new FunctionResultContent(functionCall, finalResult).ToChatMessage());
+            yield return new FunctionExecutionResult
+            {
+                Id = functionResult.CallId,
+                Result = finalResult,
+                FunctionName = functionResult.FunctionName,
+                PluginName = functionResult.PluginName
+            };
+        }
+        else
+        {
+            chatHistory.Add(functionResult.ToChatMessage());
+            yield return new FunctionExecutionResult
+            {
+                Id = functionResult.CallId,
+                Result = functionResult.Result,
+                FunctionName = functionResult.FunctionName,
+                PluginName = functionResult.PluginName
+            };
+        }
     }
 
     private static ChatTokenUsage? GetOutputTokensFromMetadata(IReadOnlyDictionary<string, object?>? metadata)

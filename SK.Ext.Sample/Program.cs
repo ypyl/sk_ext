@@ -10,7 +10,7 @@ class Program
         {
             PrintUsage();
             Console.WriteLine("No sample name provided. Running default sample: parallel.");
-            await RunSample("parallel");
+            await new ParallelExecutionSample().Run(groqKey);
             return;
         }
 
@@ -22,6 +22,9 @@ class Program
     {
         switch (sampleName)
         {
+            case "streamed":
+                await new StreamedFunctionExecutionSample().Run(groqKey);
+                break;
             case "parallel":
                 await new ParallelExecutionSample().Run(groqKey);
                 break;
