@@ -10,7 +10,7 @@ class Program
         {
             PrintUsage();
             Console.WriteLine("No sample name provided. Running default sample: parallel.");
-            await new ParallelExecutionSample().Run(groqKey);
+            await RunSample("collab1");
             return;
         }
 
@@ -23,19 +23,25 @@ class Program
         switch (sampleName)
         {
             case "streamed":
-                await new StreamedFunctionExecutionSample().Run(groqKey);
+                await StreamedFunctionExecutionSample.Run(groqKey);
                 break;
             case "parallel":
-                await new ParallelExecutionSample().Run(groqKey);
+                await ParallelExecutionSample.Run(groqKey);
                 break;
             case "structured":
-                await new StructuredOutputSample().Run(groqKey);
+                await StructuredOutputSample.Run(groqKey);
                 break;
             case "workflow1":
-                await new WorkflowSample().Run(groqKey, "What is the biggest city by population in Europe?");
+                await WorkflowSample.Run(groqKey, "What is the biggest city by population in Europe?");
                 break;
             case "workflow2":
-                await new WorkflowSample().Run(groqKey, "I need help optimizing a complex SQL database with millions of records. Consider indexing strategies, query performance, partitioning options, and maintenance plans. What should I do?");
+                await WorkflowSample.Run(groqKey, "I need help optimizing a complex SQL database with millions of records. Consider indexing strategies, query performance, partitioning options, and maintenance plans. What should I do?");
+                break;
+            case "collab1":
+                await CollaborationSample.Run(groqKey, "Write a comprehensive guide about machine learning basics.", default);
+                break;
+            case "collab2":
+                await CollaborationSample.Run(groqKey, "Explain the SOLID principles in software development with examples.", default);
                 break;
             default:
                 Console.WriteLine($"Unknown sample: {sampleName}");
@@ -52,5 +58,7 @@ class Program
         Console.WriteLine("  structured  - Run structured output sample");
         Console.WriteLine("  workflow1   - Run workflow sample with city population query");
         Console.WriteLine("  workflow2   - Run workflow sample with SQL optimization query");
+        Console.WriteLine("  collab1     - Run collaboration sample with ML basics guide");
+        Console.WriteLine("  collab2     - Run collaboration sample with SOLID principles explanation");
     }
 }

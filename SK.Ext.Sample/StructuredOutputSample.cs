@@ -13,11 +13,11 @@ namespace SK.Ext.Sample;
 
 public class StructuredOutputSample
 {
-    private static JsonSerializerOptions options = new(JsonSerializerDefaults.Web)
+    private static readonly JsonSerializerOptions options = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
-    public async Task Run(string groqKey, CancellationToken cancellationToken = default)
+    public static async Task Run(string groqKey, CancellationToken cancellationToken = default)
     {
         var completeResult = new StringBuilder();
         await foreach (var result in FetchCityPopulationInfo(groqKey, cancellationToken))
@@ -37,7 +37,7 @@ public class StructuredOutputSample
         Console.WriteLine($"[Parsed] {parsed?.Name}");
     }
 
-    private async IAsyncEnumerable<IContentResult> FetchCityPopulationInfo(string groqKey, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private static async IAsyncEnumerable<IContentResult> FetchCityPopulationInfo(string groqKey, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var builder = Kernel.CreateBuilder();
         builder.AddOpenAIChatCompletion("llama-3.3-70b-versatile",

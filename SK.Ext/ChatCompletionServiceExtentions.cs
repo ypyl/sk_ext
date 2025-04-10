@@ -373,7 +373,7 @@ public static class ChatCompletionServiceExtentions
         }
     }
 
-    private static async IAsyncEnumerable<IContentResult> ExecuteFunctionCall(Kernel kernel, ChatHistory chatHistory, FunctionCallContent functionCall, CancellationToken token)
+    private static async IAsyncEnumerable<IContentResult> ExecuteFunctionCall(Kernel kernel, ChatHistory chatHistory, FunctionCallContent functionCall, [EnumeratorCancellation] CancellationToken token)
     {
         FunctionResultContent functionResult;
         try

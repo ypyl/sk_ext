@@ -10,7 +10,7 @@ namespace SK.Ext.Sample;
 
 public class ParallelExecutionSample
 {
-    public async Task Run(string groqKey)
+    public static async Task Run(string groqKey)
     {
         await foreach (var (taskId, content) in MergeWithTaskId([
             (1, SetUpWeatherAssistantKernel(groqKey, "Boston", "25 and snowing")),

@@ -29,7 +29,7 @@ public class WorkflowSample
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
-    public async Task Run(string groqKey, string userInput, CancellationToken cancellationToken = default)
+    public static async Task Run(string groqKey, string userInput, CancellationToken cancellationToken = default)
     {
         var chatType = await DetermineChatType(groqKey, userInput, cancellationToken);
         Console.WriteLine($"Selected chat type: {chatType?.Type}");
@@ -44,7 +44,7 @@ public class WorkflowSample
         }
     }
 
-    private async Task<ChatTypeResult?> DetermineChatType(string groqKey, string userInput, CancellationToken cancellationToken)
+    private static async Task<ChatTypeResult?> DetermineChatType(string groqKey, string userInput, CancellationToken cancellationToken)
     {
         var builder = Kernel.CreateBuilder();
         builder.AddOpenAIChatCompletion("llama-3.3-70b-versatile",
@@ -79,7 +79,7 @@ public class WorkflowSample
         return JsonSerializer.Deserialize<ChatTypeResult>(result.ToString(), Options);
     }
 
-    private async Task ExecuteGenericChat(string groqKey, string userInput, CancellationToken cancellationToken)
+    private static async Task ExecuteGenericChat(string groqKey, string userInput, CancellationToken cancellationToken)
     {
         var kernel = BuildKernel(groqKey);
         var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
@@ -102,7 +102,7 @@ public class WorkflowSample
     private record TaskBreakdown(List<TaskStep> Steps);
     private record TaskStep(int StepNumber, string Description);
 
-    private async Task ExecuteBreakDownChat(string groqKey, string userInput, CancellationToken cancellationToken)
+    private static async Task ExecuteBreakDownChat(string groqKey, string userInput, CancellationToken cancellationToken)
     {
         var kernel = BuildKernel(groqKey);
         var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
@@ -222,7 +222,7 @@ public class WorkflowSample
         }
     }
 
-    private async IAsyncEnumerable<IContentResult> ProcessStep(
+    private static async IAsyncEnumerable<IContentResult> ProcessStep(
         string groqKey,
         TaskStep step,
         [EnumeratorCancellation] CancellationToken cancellationToken)

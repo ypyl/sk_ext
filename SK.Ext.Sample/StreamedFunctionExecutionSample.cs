@@ -4,11 +4,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
-using SK.Ext;
+
+namespace SK.Ext.Sample;
 
 public class StreamedFunctionExecutionSample
 {
-    public async Task Run(string groqKey, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public static async Task Run(string groqKey, CancellationToken cancellationToken = default)
     {
         var builder = Kernel.CreateBuilder();
         builder.AddOpenAIChatCompletion("llama-3.3-70b-versatile",
