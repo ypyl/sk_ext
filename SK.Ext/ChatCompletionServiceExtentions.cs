@@ -389,7 +389,7 @@ public static class ChatCompletionServiceExtentions
             chatHistory.Add(functionResult.ToChatMessage());
             yield return new FunctionExceptionResult { Id = functionResult.CallId, Exception = exception };
         }
-        if (functionResult.Result is IAsyncEnumerable<object?> functionCallResult)
+        else if (functionResult.Result is IAsyncEnumerable<object?> functionCallResult)
         {
             var finalResult = new List<object?>();
             await foreach (var item in functionCallResult.WithCancellation(token))
