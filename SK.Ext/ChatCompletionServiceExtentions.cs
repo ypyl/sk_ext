@@ -40,6 +40,8 @@ public readonly struct FunctionExceptionResult : IContentResult
 {
     public required string? Id { get; init; }
     public required Exception Exception { get; init; }
+    public required string FunctionName { get; init; }
+    public required string PluginName { get; init; }
 }
 
 public readonly struct UsageResult : IContentResult
@@ -387,7 +389,13 @@ public static class ChatCompletionServiceExtentions
         if (functionResult.Result is Exception exception)
         {
             chatHistory.Add(functionResult.ToChatMessage());
-            yield return new FunctionExceptionResult { Id = functionResult.CallId, Exception = exception };
+            yield return new FunctionExceptionResult
+            {
+                Id = functionResult.CallId,
+                Exception = exception,
+                FunctionName = functionResult.FunctionName,
+                PluginName = functionResult.PluginName
+            };
         }
         else if (functionResult.Result is IAsyncEnumerable<object?> functionCallResult)
         {
