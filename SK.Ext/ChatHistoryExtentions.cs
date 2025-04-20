@@ -103,6 +103,15 @@ public static class ChatHistoryExtentions
         }
     }
 
+    /// <summary>
+    /// Removes duplicated function call results from the chat history per assistant message.
+    /// This method identifies function calls that have the same result and merges them into a single function call with a combined result.
+    /// But it does not find duplications across different assistant messages (only within the same message).
+    /// Use <see cref="RemoveDuplicatedFunctionCallResults"/> for removing duplication withing the whole history.
+    /// </summary>
+    /// <param name="chatHistory"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
     public static IEnumerable<List<string>> RemoveDuplicatedFunctionParallelCallResults(this ChatHistory chatHistory)
     {
         var assistantMessagesWithFunctionCall = chatHistory.Where(m => m.Role == AuthorRole.Assistant && m.Items.Count > 0 && m.Items.OfType<FunctionCallContent>().Any()).ToList();
@@ -166,65 +175,96 @@ public static class ChatHistoryExtentions
         }
     }
 
-    // public static IEnumerable<List<string>> RemoveDuplicatedFunctionCallResults(this ChatHistory chatHistory)
-    // {
-    //     var assistantMessagesWithFunctionCall = chatHistory.Where(m => m.Role == AuthorRole.Assistant && m.Items.Count > 0 && m.Items.OfType<FunctionCallContent>().Any()).ToList();
-    //     var assistantMessage = assistantMessagesWithFunctionCall;
-    //     var functionCallGroups = assistantMessagesWithFunctionCall.SelectMany(x => x.Items).OfType<FunctionCallContent>().GroupBy(x => x.FunctionName + x.PluginName);
-    //     var mergeCallIds = new List<string>();
+    /// <summary>
+    /// Removes duplicated function call results from the chat history.
+    /// This method identifies function calls that have the same result and merges them into a single function call with a combined result.
+    /// Add the new merged function call and result to the chat history at the end.
+    /// Check <see cref="RemoveDuplicatedFunctionParallelCallResults"/> for removing duplication within the same assistant message.
+    /// </summary>
+    /// <param name="chatHistory"></param>
+    /// <returns></returns>
+    public static IEnumerable<List<string>> RemoveDuplicatedFunctionCallResults(this ChatHistory chatHistory)
+    {
+        var assistantMessagesWithFunctionCall = chatHistory.Where(m => m.Role == AuthorRole.Assistant && m.Items.Count > 0 && m.Items.OfType<FunctionCallContent>().Any()).ToList();
+        var functionCallGroups = assistantMessagesWithFunctionCall.SelectMany(x => x.Items).OfType<FunctionCallContent>()
+            .GroupBy(x => x.FunctionName + x.PluginName);
+        var mergeCallIdGroups = new List<List<string>>();
 
-    //     foreach (var group in functionCallGroups)
-    //     {
-    //         var functionCallIds = group.Select(x => x.Id).ToList();
-    //         var messagesWithFunctionResults = chatHistory.Where(m => m.Role == AuthorRole.Tool && m.Items.Count == 1 && m.Items[0] is FunctionResultContent frc
-    //             && functionCallIds.Contains(frc.CallId));
-    //         var groupedResults = messagesWithFunctionResults
-    //             .GroupBy(x =>
-    //             {
-    //                 var result = ((FunctionResultContent)x.Items[0]).Result;
-    //                 return result is IComparable comparableResult ? comparableResult : null;
-    //             }, new ResultComparer())
-    //             .Where(x => x.Key != null && x.Count() > 1);
-    //         foreach (var groupResult in groupedResults)
-    //         {
-    //             mergeCallIds.AddRange(groupResult.Select(x => ((FunctionResultContent)x.Items[0]).CallId).Where(x => x != null)!);
-    //         }
-    //     }
+        // Iterate through each group of function calls
+        // and find function call ids that have the same result
+        // and are not null or empty
+        // so we have a group of such ids to merge
 
-    //     if (mergeCallIds.Count == 0)
-    //     {
-    //         yield break;
-    //     }
+        foreach (var group in functionCallGroups)
+        {
+            var functionCallIds = group.Select(x => x.Id).ToList();
+            var messagesWithFunctionResults = chatHistory.Where(m => m.Role == AuthorRole.Tool && m.Items.Count == 1 && m.Items[0] is FunctionResultContent frc
+                && functionCallIds.Contains(frc.CallId));
+            var groupedResults = messagesWithFunctionResults
+                .GroupBy(x =>
+                {
+                    var result = ((FunctionResultContent)x.Items[0]).Result;
+                    return result is IComparable comparableResult ? comparableResult : null;
+                }, new ResultComparer())
+                .Where(x => x.Key != null && x.Count() > 1);
+            foreach (var groupResult in groupedResults)
+            {
+                mergeCallIdGroups.Add(groupResult.Select(x => ((FunctionResultContent)x.Items[0]).CallId!).Where(x => x != null).ToList());
+            }
+        }
 
-    //     yield return mergeCallIds;
+        if (mergeCallIdGroups.Count == 0)
+        {
+            yield break;
+        }
 
-        // var functionCallContextsToJoins = assistantMessagesWithFunctionCall.SelectMany(x => x.Items).OfType<FunctionCallContent>()
-        //     .Where(x => x.Id != null && mergeCallIds.Contains(x.Id))
-        //     .ToList();
+        // iterate via each group of function call ids to merge
+        // and remove the duplicates from the chat history
+        // and add the new merged function call and result to the chat history
 
-        // if (functionCallContextsToJoins.Count != mergeCallIds.Count)
-        // {
-        //     // Ensure all mergeCallIds exist in assistantMessage.Items
-        //     throw new InvalidOperationException("Mismatch between mergeCallIds and available FunctionCallContent items.");
-        // }
-        // var newFunctionCallContext = CombineFunctionCallContents(functionCallContextsToJoins);
-        // foreach (var functionCallContextToDelete in functionCallContextsToJoins)
-        // {
-        //     assistantMessage.Items.Remove(functionCallContextToDelete);
-        // }
-        // assistantMessage.Items.Add(newFunctionCallContext);
+        // TODO should we have only one message with all function calls (one new assistant message)?
+        // currently we have creating asistant/tool message for each group of function call ids
+        foreach (var mergeCallIds in mergeCallIdGroups)
+        {
+            if (mergeCallIds.Count == 0)
+            {
+                continue;
+            }
+            yield return mergeCallIds;
+            var functionCallContextsToJoins = assistantMessagesWithFunctionCall
+                .ToLookup(
+                    x => x,
+                    y => y.Items.OfType<FunctionCallContent>().Where(x => x.Id != null && mergeCallIds.Contains(x.Id)).ToList())
+                .Where(x => x.Any()).ToList();
 
-        // var functionResults = chatHistory.Where(m => m.Role == AuthorRole.Tool && m.Items.Count == 1 && m.Items[0] is FunctionResultContent frc
-        //     && frc.CallId != null && mergeCallIds.Contains(frc.CallId)).ToList();
-        // var newFunctionResult = CombineFunctionResults(functionResults.Select(x => (FunctionResultContent)x.Items[0]), newFunctionCallContext.Id!);
-        // for (int y = functionResults.Count - 1; y >= 0; y--)
-        // {
-        //     var functionResultToDelete = functionResults[y];
-        //     chatHistory.Remove(functionResultToDelete);
-        // }
-        // var indexToInsert = chatHistory.IndexOf(assistantMessage) + 1;
-        // chatHistory.Insert(indexToInsert, newFunctionResult.ToChatMessage());
-    // }
+            var fnctionCallContexts = new List<FunctionCallContent>();
+            foreach (var functionCallContextToDelete in functionCallContextsToJoins)
+            {
+                var functionCallsToRemove = functionCallContextToDelete.SelectMany(x => x).ToList();
+                foreach (var functionCallToDelete in functionCallsToRemove)
+                {
+                    fnctionCallContexts.Add(functionCallToDelete);
+                    functionCallContextToDelete.Key.Items.Remove(functionCallToDelete);
+                }
+                if (functionCallContextToDelete.Key.Items.Count == 0)
+                {
+                    chatHistory.Remove(functionCallContextToDelete.Key);
+                }
+            }
+            var newFunctionCallContext = CombineFunctionCallContents(fnctionCallContexts);
+            chatHistory.Add(new ChatMessageContent(AuthorRole.Assistant, [newFunctionCallContext]));
+
+            var functionResults = chatHistory.Where(m => m.Role == AuthorRole.Tool && m.Items.Count == 1 && m.Items[0] is FunctionResultContent frc
+                && frc.CallId != null && mergeCallIds.Contains(frc.CallId)).ToList();
+            var newFunctionResult = CombineFunctionResults(functionResults.Select(x => (FunctionResultContent)x.Items[0]), newFunctionCallContext.Id!);
+            for (int y = functionResults.Count - 1; y >= 0; y--)
+            {
+                var functionResultToDelete = functionResults[y];
+                chatHistory.Remove(functionResultToDelete);
+            }
+            chatHistory.Add(newFunctionResult.ToChatMessage());
+        }
+    }
 
     private static FunctionCallContent CombineFunctionCallContents(IEnumerable<FunctionCallContent> functionCallContents)
     {

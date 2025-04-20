@@ -2,7 +2,7 @@
 
 class Program
 {
-    const string groqKey = "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";
+    const string groqKey = "<<KEY>>";
 
     static async Task Main(string[] args)
     {
@@ -10,7 +10,7 @@ class Program
         {
             PrintUsage();
             Console.WriteLine("No sample name provided. Running default sample:.");
-            await RunSample("duplication");
+            await RunSample("completion");
             return;
         }
 

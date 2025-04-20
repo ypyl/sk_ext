@@ -207,99 +207,103 @@ public class ChatHistoryExtentionsTests
         Assert.Empty(chatHistory);
     }
 
-    // [Fact]
-    // public void RemoveDuplicatedFunctionCallResults_RemoveDuplicatedFunctionCalls()
-    // {
-    //     // Arrange
-    //     var chatHistory = new ChatHistory();
-    //     var functionCallContent1 = new FunctionCallContent("functionName", "pluginName", "callId1", new KernelArguments { { "param1", "value1" } });
-    //     var functionResultContent1 = new FunctionResultContent(functionCallContent1, "result1");
+    [Fact]
+    public void RemoveDuplicatedFunctionCallResults_RemoveDuplicatedFunctionCalls()
+    {
+        // Arrange
+        var chatHistory = new ChatHistory();
+        var functionCallContent1 = new FunctionCallContent("functionName", "pluginName", "callId1", new KernelArguments { { "param1", "value1" } });
+        var functionResultContent1 = new FunctionResultContent(functionCallContent1, "result1");
 
-    //     var functionCallContent2 = new FunctionCallContent("functionName", "pluginName", "callId2", new KernelArguments { { "param1", "value2" } });
-    //     var functionResultContent2 = new FunctionResultContent(functionCallContent2, "result1");
+        var functionCallContent2 = new FunctionCallContent("functionName", "pluginName", "callId2", new KernelArguments { { "param1", "value2" } });
+        var functionResultContent2 = new FunctionResultContent(functionCallContent2, "result1");
 
-    //     var chatMessageWithFunctionCall1 = new ChatMessageContent(AuthorRole.Assistant, new ChatMessageContentItemCollection { functionCallContent1 });
-    //     var chatMessageWithFunctionResult1 = new ChatMessageContent(AuthorRole.Tool, new ChatMessageContentItemCollection { functionResultContent1 });
-    //     var chatMessageWithFunctionCall2 = new ChatMessageContent(AuthorRole.Assistant, new ChatMessageContentItemCollection { functionCallContent2 });
-    //     var chatMessageWithFunctionResult2 = new ChatMessageContent(AuthorRole.Tool, new ChatMessageContentItemCollection { functionResultContent2 });
+        var chatMessageWithFunctionCall1 = new ChatMessageContent(AuthorRole.Assistant, new ChatMessageContentItemCollection { functionCallContent1 });
+        var chatMessageWithFunctionResult1 = new ChatMessageContent(AuthorRole.Tool, new ChatMessageContentItemCollection { functionResultContent1 });
+        var chatMessageWithFunctionCall2 = new ChatMessageContent(AuthorRole.Assistant, new ChatMessageContentItemCollection { functionCallContent2 });
+        var chatMessageWithFunctionResult2 = new ChatMessageContent(AuthorRole.Tool, new ChatMessageContentItemCollection { functionResultContent2 });
 
-    //     chatHistory.Add(chatMessageWithFunctionCall1);
-    //     chatHistory.Add(chatMessageWithFunctionResult1);
-    //     chatHistory.Add(chatMessageWithFunctionCall2);
-    //     chatHistory.Add(chatMessageWithFunctionResult2);
+        chatHistory.Add(chatMessageWithFunctionCall1);
+        chatHistory.Add(chatMessageWithFunctionResult1);
+        chatHistory.Add(chatMessageWithFunctionCall2);
+        chatHistory.Add(chatMessageWithFunctionResult2);
 
-    //     // Act
-    //     chatHistory.RemoveDuplicatedFunctionParallelCallResults().ToList();
+        // Act
+        chatHistory.RemoveDuplicatedFunctionCallResults().ToList();
 
-    //     // Assert
-    //     var updatedMessage = chatHistory.FirstOrDefault(m => m.Role == AuthorRole.Assistant);
-    //     Assert.NotNull(updatedMessage);
-    //     var combinedFunctionCall = updatedMessage.Items.OfType<FunctionCallContent>().FirstOrDefault();
-    //     Assert.NotNull(combinedFunctionCall);
-    //     Assert.True(combinedFunctionCall.Arguments.ContainsName("param1"));
-    //     Assert.Equal("value1;value2", combinedFunctionCall.Arguments["param1"]);
+        // Assert
+        var updatedMessage = chatHistory.FirstOrDefault(m => m.Role == AuthorRole.Assistant);
+        Assert.NotNull(updatedMessage);
+        var combinedFunctionCall = updatedMessage.Items.OfType<FunctionCallContent>().FirstOrDefault();
+        Assert.NotNull(combinedFunctionCall);
+        Assert.True(combinedFunctionCall.Arguments.ContainsName("param1"));
+        Assert.Equal("value1;value2", combinedFunctionCall.Arguments["param1"]);
 
-    //     var toolMessages = chatHistory.Where(m => m.Role == AuthorRole.Tool).ToList();
-    //     Assert.Single(toolMessages);
-    //     Assert.Single(toolMessages[0].Items);
-    //     var combinedFunctionResult = toolMessages[0].Items.OfType<FunctionResultContent>().FirstOrDefault();
-    //     Assert.NotNull(combinedFunctionResult);
-    //     Assert.Equal("result1", combinedFunctionResult.Result);
-    // }
+        var toolMessages = chatHistory.Where(m => m.Role == AuthorRole.Tool).ToList();
+        Assert.Single(toolMessages);
+        Assert.Single(toolMessages[0].Items);
+        var combinedFunctionResult = toolMessages[0].Items.OfType<FunctionResultContent>().FirstOrDefault();
+        Assert.NotNull(combinedFunctionResult);
+        Assert.Equal("result1", combinedFunctionResult.Result);
+    }
 
-    // [Fact]
-    // public void RemoveDuplicatedFunctionCallResults_RemoveMoreThanOneDuplicatedCall()
-    // {
-    //     // Arrange
-    //     var chatHistory = new ChatHistory();
-    //     var functionCallContent1 = new FunctionCallContent("functionName", "pluginName", "callId1", new KernelArguments { { "param1", "value1" } });
-    //     var functionResultContent1 = new FunctionResultContent(functionCallContent1, "result1");
+    [Fact]
+    public void RemoveDuplicatedFunctionCallResults_RemoveMoreThanOneDuplicatedCall()
+    {
+        // Arrange
+        var chatHistory = new ChatHistory();
+        var functionCallContent1 = new FunctionCallContent("functionName", "pluginName", "callId1", new KernelArguments { { "param1", "value1" } });
+        var functionResultContent1 = new FunctionResultContent(functionCallContent1, "result1");
 
-    //     var functionCallContent2 = new FunctionCallContent("functionName", "pluginName", "callId2", new KernelArguments { { "param1", "value2" } });
-    //     var functionResultContent2 = new FunctionResultContent(functionCallContent2, "result1");
+        var functionCallContent2 = new FunctionCallContent("functionName", "pluginName", "callId2", new KernelArguments { { "param1", "value2" } });
+        var functionResultContent2 = new FunctionResultContent(functionCallContent2, "result1");
 
-    //     var functionCallContent3 = new FunctionCallContent("functionName", "pluginName", "callId3", new KernelArguments { { "param2", "value3" } });
-    //     var functionResultContent3 = new FunctionResultContent(functionCallContent2, "result2");
+        var functionCallContent3 = new FunctionCallContent("functionName", "pluginName", "callId3", new KernelArguments { { "param2", "value3" } });
+        var functionResultContent3 = new FunctionResultContent(functionCallContent3, "result2");
 
-    //     var functionCallContent4 = new FunctionCallContent("functionName", "pluginName", "callId4", new KernelArguments { { "param2", "value4" } });
-    //     var functionResultContent4 = new FunctionResultContent(functionCallContent2, "result2");
+        var functionCallContent4 = new FunctionCallContent("functionName", "pluginName", "callId4", new KernelArguments { { "param2", "value4" } });
+        var functionResultContent4 = new FunctionResultContent(functionCallContent4, "result2");
 
-    //     var chatMessageWithFunctionCall1 = new ChatMessageContent(AuthorRole.Assistant, new ChatMessageContentItemCollection { functionCallContent1, functionCallContent3 });
-    //     var chatMessageWithFunctionResult1 = new ChatMessageContent(AuthorRole.Tool, new ChatMessageContentItemCollection { functionResultContent1 });
-    //     var chatMessageWithFunctionResult3 = new ChatMessageContent(AuthorRole.Tool, new ChatMessageContentItemCollection { functionResultContent3 });
-    //     var chatMessageWithFunctionCall2 = new ChatMessageContent(AuthorRole.Assistant, new ChatMessageContentItemCollection { functionCallContent2, functionCallContent4 });
-    //     var chatMessageWithFunctionResult2 = new ChatMessageContent(AuthorRole.Tool, new ChatMessageContentItemCollection { functionResultContent2 });
-    //     var chatMessageWithFunctionResult4 = new ChatMessageContent(AuthorRole.Tool, new ChatMessageContentItemCollection { functionResultContent4 });
+        var chatMessageWithFunctionCall1 = new ChatMessageContent(AuthorRole.Assistant, new ChatMessageContentItemCollection { functionCallContent1, functionCallContent3 });
+        var chatMessageWithFunctionResult1 = new ChatMessageContent(AuthorRole.Tool, new ChatMessageContentItemCollection { functionResultContent1 });
+        var chatMessageWithFunctionResult3 = new ChatMessageContent(AuthorRole.Tool, new ChatMessageContentItemCollection { functionResultContent3 });
+        var chatMessageWithFunctionCall2 = new ChatMessageContent(AuthorRole.Assistant, new ChatMessageContentItemCollection { functionCallContent2, functionCallContent4 });
+        var chatMessageWithFunctionResult2 = new ChatMessageContent(AuthorRole.Tool, new ChatMessageContentItemCollection { functionResultContent2 });
+        var chatMessageWithFunctionResult4 = new ChatMessageContent(AuthorRole.Tool, new ChatMessageContentItemCollection { functionResultContent4 });
 
-    //     chatHistory.Add(chatMessageWithFunctionCall1);
-    //     chatHistory.Add(chatMessageWithFunctionResult1);
-    //     chatHistory.Add(chatMessageWithFunctionResult3);
-    //     chatHistory.Add(chatMessageWithFunctionCall2);
-    //     chatHistory.Add(chatMessageWithFunctionResult2);
-    //     chatHistory.Add(chatMessageWithFunctionResult4);
+        chatHistory.Add(chatMessageWithFunctionCall1);
+        chatHistory.Add(chatMessageWithFunctionResult1);
+        chatHistory.Add(chatMessageWithFunctionResult3);
+        chatHistory.Add(chatMessageWithFunctionCall2);
+        chatHistory.Add(chatMessageWithFunctionResult2);
+        chatHistory.Add(chatMessageWithFunctionResult4);
 
-    //     // Act
-    //     chatHistory.RemoveDuplicatedFunctionParallelCallResults().ToList();
+        // Act
+        chatHistory.RemoveDuplicatedFunctionCallResults().ToList();
 
-    //     // Assert
-    //     var updatedMessage = chatHistory.FirstOrDefault(m => m.Role == AuthorRole.Assistant);
-    //     Assert.NotNull(updatedMessage);
-    //     var combinedFunctionCalls = updatedMessage.Items.OfType<FunctionCallContent>().ToList();
-    //     Assert.True(combinedFunctionCalls[0].Arguments.ContainsName("param1"));
-    //     Assert.True(combinedFunctionCalls[1].Arguments.ContainsName("param2"));
-    //     Assert.Equal("value1;value2", combinedFunctionCalls[0].Arguments["param1"]);
-    //     Assert.Equal("value3;value4", combinedFunctionCalls[1].Arguments["param1"]);
+        // Assert
+        var updatedMessage = chatHistory.Where(m => m.Role == AuthorRole.Assistant).ToList();
+        Assert.Equal(2, updatedMessage.Count);
 
-    //     var toolMessages = chatHistory.Where(m => m.Role == AuthorRole.Tool).ToList();
-    //     Assert.Equal(2, toolMessages.Count);
-    //     Assert.Single(toolMessages[0].Items);
-    //     var combinedFunctionResult1 = toolMessages[0].Items.OfType<FunctionResultContent>().FirstOrDefault();
-    //     Assert.NotNull(combinedFunctionResult1);
-    //     Assert.Equal("result1", combinedFunctionResult1.Result);
+        var combinedFunctionCalls1 = updatedMessage[0].Items.OfType<FunctionCallContent>().ToList();
+        Assert.True(combinedFunctionCalls1[0].Arguments.ContainsName("param1"));
+        Assert.Equal("value1;value2", combinedFunctionCalls1[0].Arguments["param1"]);
 
-    //     Assert.Single(toolMessages[1].Items);
-    //     var combinedFunctionResult2 = toolMessages[0].Items.OfType<FunctionResultContent>().FirstOrDefault();
-    //     Assert.NotNull(combinedFunctionResult2);
-    //     Assert.Equal("result2", combinedFunctionResult2.Result);
-    // }
+        var combinedFunctionCalls2 = updatedMessage[1].Items.OfType<FunctionCallContent>().ToList();
+        Assert.True(combinedFunctionCalls2[0].Arguments.ContainsName("param2"));
+        Assert.Equal("value3;value4", combinedFunctionCalls2[0].Arguments["param2"]);
+
+        var toolMessages = chatHistory.Where(m => m.Role == AuthorRole.Tool).ToList();
+        Assert.Equal(2, toolMessages.Count);
+
+        Assert.Single(toolMessages[0].Items);
+        var combinedFunctionResult1 = toolMessages[0].Items.OfType<FunctionResultContent>().FirstOrDefault();
+        Assert.NotNull(combinedFunctionResult1);
+        Assert.Equal("result1", combinedFunctionResult1.Result);
+
+        Assert.Single(toolMessages[1].Items);
+        var combinedFunctionResult2 = toolMessages[1].Items.OfType<FunctionResultContent>().FirstOrDefault();
+        Assert.NotNull(combinedFunctionResult2);
+        Assert.Equal("result2", combinedFunctionResult2.Result);
+    }
 }
