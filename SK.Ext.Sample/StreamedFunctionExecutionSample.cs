@@ -43,9 +43,9 @@ public class StreamedFunctionExecutionSample
 
         await foreach (var content in chatCompletionService.GetStreamingChatMessageContentsWithFunctions(kernel, chatHistory, settings, cancellationToken))
         {
-            if (content is TextResult textContent)
+            if (content is StreamedTextResult streamedTextContent)
             {
-                Console.WriteLine($"[Text] {textContent.Text}");
+                Console.WriteLine($"[StreamedText] {streamedTextContent.Text}");
             }
             if (content is StreamedFunctionExecutionResult streamedFunctionExecutionResult)
             {

@@ -120,6 +120,10 @@ public class CollaborationSample
             {
                 result.Append(textResult.Text);
             }
+            if (content is StreamedTextResult streamedTextContent)
+            {
+                result.Append(streamedTextContent.Text);
+            }
         }
         return result.ToString();
     }

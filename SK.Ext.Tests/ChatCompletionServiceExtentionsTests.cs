@@ -30,8 +30,8 @@ public class ChatCompletionServiceExtentionsTests
 
         // Assert
         Assert.Equal(3, results.Count);
-        Assert.IsType<TextResult>(results[1]);
-        Assert.Equal("Hello", ((TextResult)results[1]).Text);
+        Assert.IsType<StreamedTextResult>(results[1]);
+        Assert.Equal("Hello", ((StreamedTextResult)results[1]).Text);
     }
 
     [Fact]
@@ -192,10 +192,13 @@ public class ChatCompletionServiceExtentionsTests
         Assert.True(callingLLMs[0].IsStreamed);
         Assert.False(callingLLMs[1].IsStreamed);
 
+        var streamedTextResults = results.OfType<StreamedTextResult>().ToList();
+        Assert.Single(streamedTextResults);
+        Assert.Equal(string.Empty, streamedTextResults[0].Text);
+
         var textResults = results.OfType<TextResult>().ToList();
-        Assert.Equal(2, textResults.Count);
-        Assert.Equal(string.Empty, textResults[0].Text);
-        Assert.Equal("Sync Response", textResults[1].Text);
+        Assert.Single(textResults);
+        Assert.Equal("Sync Response", textResults[0].Text);
 
         var iterations = results.OfType<IterationResult>().ToList();
         Assert.Equal(2, iterations.Count);

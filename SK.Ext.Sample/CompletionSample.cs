@@ -1,6 +1,5 @@
 using System.ClientModel;
 using System.Runtime.CompilerServices;
-using System.Threading.Channels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
@@ -8,56 +7,51 @@ using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace SK.Ext.Sample;
 
-public class ParallelExecutionSample
+public class CompletionSample
 {
     public static async Task Run(string groqKey)
     {
-        await foreach (var (taskId, content) in MergeWithTaskId([
-            (1, SetUpWeatherAssistantKernel(groqKey, "Boston", "25 and snowing")),
-            (2, SetUpWeatherAssistantKernel(groqKey, "London", "15 and foggy")),
-            (3, SetUpWeatherAssistantKernel(groqKey, "Miami", "95 and humid")),
-            (4, SetUpWeatherAssistantKernel(groqKey, "Paris", "70 and partly cloudy")),
-            (5, SetUpWeatherAssistantKernel(groqKey, "Tokyo", "85 and stormy")),
-            (6, SetUpWeatherAssistantKernel(groqKey, "Sydney", "65 and windy")),
-            (7, SetUpWeatherAssistantKernel(groqKey, "Tel Aviv", "90 and clear"))
-            ]))
+        await foreach (var content in SetUpWeatherAssistantKernel(groqKey, "Boston", "25 and snowing"))
         {
-            ProcessingStreamResults(content, taskId);
+            ProcessingStreamResults(content);
         }
     }
 
-    private static void ProcessingStreamResults(IContentResult content, int taskId = 0)
+    private static void ProcessingStreamResults(IContentResult content)
     {
         Console.Write(content switch
         {
             TextResult textResult
-                => $"[Text Result {taskId}] {textResult.Text}",
+                => $"[Text Result] {textResult.Text}",
 
             StreamedTextResult streamedTextResult
                 => $"{streamedTextResult.Text}",
 
+            FinishReasonResult finishReasonResult
+                => $"[Finish Reason] {finishReasonResult.FinishReason}\n",
+
             CallingLLM callingLLM
-                => $"[Calling LLM {taskId}] Streamed: {callingLLM.IsStreamed}\n",
+                => $"[Calling LLM] Streamed: {callingLLM.IsStreamed}\n",
 
             FunctionCall functionCall
-                => $"[Function Call {taskId}] {functionCall.FunctionName}\n" +
+                => $"[Function Call] {functionCall.FunctionName}\n" +
                    string.Join("\n", (functionCall.Arguments ?? new Dictionary<string, object?>()).Select(arg => $"{arg.Key}: {arg.Value}")) +
                    (functionCall.Arguments?.Any() == true ? "\n" : string.Empty),
 
             FunctionExceptionResult functionExceptionResult
-                => $"[Exception {taskId}] {functionExceptionResult.Exception.Message}\n",
+                => $"[Exception] {functionExceptionResult.Exception.Message}\n",
 
             FunctionExecutionResult functionResult
-                => $"[Result {taskId}] {functionResult.Result?.ToString() ?? string.Empty}\n",
+                => $"[Result] {functionResult.Result?.ToString() ?? string.Empty}\n",
 
             UsageResult usageResult
-                => $"[Usage {taskId}] Input Tokens: {usageResult.InputTokenCount}, Output Tokens: {usageResult.OutputTokenCount}, Total Tokens: {usageResult.TotalTokenCount}\n",
+                => $"[Usage] Input Tokens: {usageResult.InputTokenCount}, Output Tokens: {usageResult.OutputTokenCount}, Total Tokens: {usageResult.TotalTokenCount}\n",
 
             IterationResult iterationResult
-                => $"[Iteration {taskId}] Iteration: {iterationResult.Iteration}, Is Streamed: {iterationResult.IsStreamed}, Function Calls: {string.Join(", ", iterationResult.CalledFullFunctions.Select(fc => fc.FunctionName))}\n",
+                => $"[Iteration] Iteration: {iterationResult.Iteration}, Is Streamed: {iterationResult.IsStreamed}, Function Calls: {string.Join(", ", iterationResult.CalledFullFunctions.Select(fc => fc.FunctionName))}\n",
 
             CallingLLMExceptionResult callingLLMExceptionResult
-                => $"[Calling LLM Exception {taskId}] {callingLLMExceptionResult.Exception}\n",
+                => $"[Calling LLM Exception] {callingLLMExceptionResult.Exception}\n",
             _ => string.Empty
         });
     }
@@ -106,52 +100,6 @@ public class ParallelExecutionSample
                 {
                     chatHistory.ReplaceFunctionCallResult(fr.Id, weatherCondition);
                 }
-            }
-        }
-    }
-
-    private static async IAsyncEnumerable<(int taskId, T item)> MergeWithTaskId<T>(
-        IEnumerable<(int taskId, IAsyncEnumerable<T> stream)> streams,
-        int batchSize = 3,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        var chunks = streams.Chunk(batchSize);
-        foreach (var chunk in chunks)
-        {
-            var chunkChannel = Channel.CreateUnbounded<(int taskId, T item)>();
-            var chunkTasks = new List<Task>();
-
-            foreach (var (taskId, stream) in chunk)
-            {
-                chunkTasks.Add(Task.Run(async () =>
-                {
-                    try
-                    {
-                        await foreach (var item in stream.WithCancellation(cancellationToken))
-                        {
-                            await chunkChannel.Writer.WriteAsync((taskId, item), cancellationToken);
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        // Don't complete the channel writer on exception
-                        // Just let the task fail and continue with other tasks
-                        throw;
-                    }
-                }, cancellationToken));
-            }
-
-            _ = Task.WhenAll(chunkTasks).ContinueWith(t =>
-            {
-                // When Task.WhenAll completes, t.Exception will be an AggregateException
-                // containing all the exceptions that were thrown by the tasks
-                // If any task failed, t.Exception will not be null
-                chunkChannel.Writer.TryComplete(t.Exception?.Flatten());
-            }, cancellationToken);
-
-            await foreach (var item in chunkChannel.Reader.ReadAllAsync(cancellationToken))
-            {
-                yield return item;
             }
         }
     }

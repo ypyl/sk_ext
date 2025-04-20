@@ -103,7 +103,7 @@ public static class ChatHistoryExtentions
         }
     }
 
-    public static void RemoveDuplicatedFunctionCallResults(this ChatHistory chatHistory)
+    public static IEnumerable<List<string>> RemoveDuplicatedFunctionParallelCallResults(this ChatHistory chatHistory)
     {
         var assistantMessagesWithFunctionCall = chatHistory.Where(m => m.Role == AuthorRole.Assistant && m.Items.Count > 0 && m.Items.OfType<FunctionCallContent>().Any()).ToList();
         for (int i = assistantMessagesWithFunctionCall.Count - 1; i >= 0; i--)
@@ -135,6 +135,8 @@ public static class ChatHistoryExtentions
                 continue;
             }
 
+            yield return mergeCallIds;
+
             var functionCallContextsToJoins = assistantMessage.Items.OfType<FunctionCallContent>()
                 .Where(x => x.Id != null && mergeCallIds.Contains(x.Id))
                 .ToList();
@@ -163,6 +165,66 @@ public static class ChatHistoryExtentions
             chatHistory.Insert(indexToInsert, newFunctionResult.ToChatMessage());
         }
     }
+
+    // public static IEnumerable<List<string>> RemoveDuplicatedFunctionCallResults(this ChatHistory chatHistory)
+    // {
+    //     var assistantMessagesWithFunctionCall = chatHistory.Where(m => m.Role == AuthorRole.Assistant && m.Items.Count > 0 && m.Items.OfType<FunctionCallContent>().Any()).ToList();
+    //     var assistantMessage = assistantMessagesWithFunctionCall;
+    //     var functionCallGroups = assistantMessagesWithFunctionCall.SelectMany(x => x.Items).OfType<FunctionCallContent>().GroupBy(x => x.FunctionName + x.PluginName);
+    //     var mergeCallIds = new List<string>();
+
+    //     foreach (var group in functionCallGroups)
+    //     {
+    //         var functionCallIds = group.Select(x => x.Id).ToList();
+    //         var messagesWithFunctionResults = chatHistory.Where(m => m.Role == AuthorRole.Tool && m.Items.Count == 1 && m.Items[0] is FunctionResultContent frc
+    //             && functionCallIds.Contains(frc.CallId));
+    //         var groupedResults = messagesWithFunctionResults
+    //             .GroupBy(x =>
+    //             {
+    //                 var result = ((FunctionResultContent)x.Items[0]).Result;
+    //                 return result is IComparable comparableResult ? comparableResult : null;
+    //             }, new ResultComparer())
+    //             .Where(x => x.Key != null && x.Count() > 1);
+    //         foreach (var groupResult in groupedResults)
+    //         {
+    //             mergeCallIds.AddRange(groupResult.Select(x => ((FunctionResultContent)x.Items[0]).CallId).Where(x => x != null)!);
+    //         }
+    //     }
+
+    //     if (mergeCallIds.Count == 0)
+    //     {
+    //         yield break;
+    //     }
+
+    //     yield return mergeCallIds;
+
+        // var functionCallContextsToJoins = assistantMessagesWithFunctionCall.SelectMany(x => x.Items).OfType<FunctionCallContent>()
+        //     .Where(x => x.Id != null && mergeCallIds.Contains(x.Id))
+        //     .ToList();
+
+        // if (functionCallContextsToJoins.Count != mergeCallIds.Count)
+        // {
+        //     // Ensure all mergeCallIds exist in assistantMessage.Items
+        //     throw new InvalidOperationException("Mismatch between mergeCallIds and available FunctionCallContent items.");
+        // }
+        // var newFunctionCallContext = CombineFunctionCallContents(functionCallContextsToJoins);
+        // foreach (var functionCallContextToDelete in functionCallContextsToJoins)
+        // {
+        //     assistantMessage.Items.Remove(functionCallContextToDelete);
+        // }
+        // assistantMessage.Items.Add(newFunctionCallContext);
+
+        // var functionResults = chatHistory.Where(m => m.Role == AuthorRole.Tool && m.Items.Count == 1 && m.Items[0] is FunctionResultContent frc
+        //     && frc.CallId != null && mergeCallIds.Contains(frc.CallId)).ToList();
+        // var newFunctionResult = CombineFunctionResults(functionResults.Select(x => (FunctionResultContent)x.Items[0]), newFunctionCallContext.Id!);
+        // for (int y = functionResults.Count - 1; y >= 0; y--)
+        // {
+        //     var functionResultToDelete = functionResults[y];
+        //     chatHistory.Remove(functionResultToDelete);
+        // }
+        // var indexToInsert = chatHistory.IndexOf(assistantMessage) + 1;
+        // chatHistory.Insert(indexToInsert, newFunctionResult.ToChatMessage());
+    // }
 
     private static FunctionCallContent CombineFunctionCallContents(IEnumerable<FunctionCallContent> functionCallContents)
     {

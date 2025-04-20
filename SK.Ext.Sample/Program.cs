@@ -2,15 +2,15 @@
 
 class Program
 {
-    const string groqKey = "<<KEY>>";
+    const string groqKey = "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";
 
     static async Task Main(string[] args)
     {
         if (args.Length == 0)
         {
             PrintUsage();
-            Console.WriteLine("No sample name provided. Running default sample: parallel.");
-            await RunSample("collab1");
+            Console.WriteLine("No sample name provided. Running default sample:.");
+            await RunSample("duplication");
             return;
         }
 
@@ -22,6 +22,12 @@ class Program
     {
         switch (sampleName)
         {
+            case "duplication":
+                await RemoveDuplicatedFunctionCallResultsSample.Run(groqKey);
+                break;
+            case "completion":
+                await CompletionSample.Run(groqKey);
+                break;
             case "streamed":
                 await StreamedFunctionExecutionSample.Run(groqKey);
                 break;

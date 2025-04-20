@@ -8,19 +8,35 @@ namespace SK.Ext;
 
 public interface IContentResult { }
 
-public readonly struct TextResult : IContentResult
+public record TextResult : IContentResult
 {
     public required string Text { get; init; }
+    public required DateTime? CreatedAt { get; init; }
+    public required string? CompletionId { get; init; }
+    public required string? SystemFingerprint { get; init; }
+    public required string? Model { get; init; }
+    public required bool IsStreamed { get; init; }
 }
 
-public readonly struct FunctionCall : IContentResult
+public record StreamedTextResult : IContentResult
+{
+    public required string Text { get; init; }
+    public required DateTime? CreatedAt { get; init; }
+    public required string? CompletionId { get; init; }
+    public required string? SystemFingerprint { get; init; }
+    public required string? Model { get; init; }
+    public required bool IsStreamed { get; init; }
+}
+
+public record FunctionCall : IContentResult
 {
     public required string? Id { get; init; }
     public required string FunctionName { get; init; }
     public required IDictionary<string, object?>? Arguments { get; init; }
+    public required bool IsStreamed { get; init; }
 }
 
-public readonly struct FunctionExecutionResult : IContentResult
+public record FunctionExecutionResult : IContentResult
 {
     public required string? Id { get; init; }
     public required object? Result { get; init; }
@@ -28,7 +44,7 @@ public readonly struct FunctionExecutionResult : IContentResult
     public required string? PluginName { get; init; }
 }
 
-public readonly struct StreamedFunctionExecutionResult : IContentResult
+public record StreamedFunctionExecutionResult : IContentResult
 {
     public required string? Id { get; init; }
     public required object? Result { get; init; }
@@ -36,47 +52,68 @@ public readonly struct StreamedFunctionExecutionResult : IContentResult
     public required string? PluginName { get; init; }
 }
 
-public readonly struct FunctionExceptionResult : IContentResult
+public record FunctionExceptionResult : IContentResult
 {
     public required string? Id { get; init; }
     public required Exception Exception { get; init; }
-    public required string FunctionName { get; init; }
-    public required string PluginName { get; init; }
+    public required string? FunctionName { get; init; }
+    public required string? PluginName { get; init; }
 }
 
-public readonly struct UsageResult : IContentResult
+public record UsageResult : IContentResult
 {
     public required int OutputTokenCount { get; init; }
     public required int InputTokenCount { get; init; }
     public required int TotalTokenCount { get; init; }
+    public required DateTime? CreatedAt { get; init; }
+    public required string? CompletionId { get; init; }
+    public required string? SystemFingerprint { get; init; }
+    public required string? Model { get; init; }
     public required bool IsStreamed { get; init; }
 }
 
-public readonly struct IterationResult : IContentResult
+public record FinishReasonResult : IContentResult
+{
+    public required object? FinishReason { get; init; }
+    public required DateTime? CreatedAt { get; init; }
+    public required string? CompletionId { get; init; }
+    public required string? SystemFingerprint { get; init; }
+    public required string? Model { get; init; }
+    public required bool IsStreamed { get; init; }
+}
+
+public record IterationResult : IContentResult
 {
     public required int Iteration { get; init; }
     public required bool IsStreamed { get; init; }
-    public required FunctionCall[] FunctionCalls { get; init; }
+    public required CalledFunction[] CalledFullFunctions { get; init; }
     public required bool IsEmptyResponse { get; init; }
     public required bool IsError { get; init; }
 }
 
-public readonly struct CallingLLM : IContentResult
+public record CalledFunction
+{
+    public required string? Id { get; init; }
+    public required string FunctionName { get; init; }
+    public required string? PluginName { get; init; }
+}
+
+public record CallingLLM : IContentResult
 {
     public required bool IsStreamed { get; init; }
 }
 
-public readonly struct CallingLLMStreamedResult : IContentResult
+public record CallingLLMStreamedResult : IContentResult
 {
     public required StreamingChatMessageContent Result { get; init; }
 }
 
-public readonly struct CallingLLMResult : IContentResult
+public record CallingLLMResult : IContentResult
 {
     public required Microsoft.SemanticKernel.ChatMessageContent Result { get; init; }
 }
 
-public readonly struct CallingLLMExceptionResult : IContentResult
+public record CallingLLMExceptionResult : IContentResult
 {
     public required Exception Exception { get; init; }
     public required bool IsStreamed { get; init; }
@@ -150,7 +187,7 @@ public static class ChatCompletionServiceExtentions
                 if (chatCompletionStreamedResult is IterationResult iterationResult)
                 {
                     isFallbackToSync = !iterationResult.IsError && iterationResult.IsEmptyResponse;
-                    isContinue = iterationResult.FunctionCalls.Length > 0;
+                    isContinue = iterationResult.CalledFullFunctions.Length > 0;
                 }
                 yield return chatCompletionStreamedResult;
             }
@@ -173,7 +210,7 @@ public static class ChatCompletionServiceExtentions
             {
                 if (chatCompletionResult is IterationResult iterationResult)
                 {
-                    isContinue = iterationResult.FunctionCalls.Length > 0;
+                    isContinue = iterationResult.CalledFullFunctions.Length > 0;
                 }
                 yield return chatCompletionResult;
             }
@@ -200,7 +237,7 @@ public static class ChatCompletionServiceExtentions
             {
                 if (chatCompletionResult is IterationResult iterationResult)
                 {
-                    isContinue = iterationResult.FunctionCalls.Length > 0;
+                    isContinue = iterationResult.CalledFullFunctions.Length > 0;
                 }
                 yield return chatCompletionResult;
             }
@@ -232,14 +269,37 @@ public static class ChatCompletionServiceExtentions
                 if (streamingChatMessageContent.Result.Content is not null)
                 {
                     responseStringBuilder.Append(streamingChatMessageContent.Result.Content);
-                    yield return new TextResult { Text = streamingChatMessageContent.Result.Content };
+                    yield return new StreamedTextResult
+                    {
+                        Text = streamingChatMessageContent.Result.Content,
+                        CompletionId = MetadataInfo(streamingChatMessageContent.Result.Metadata, "CompletionId"),
+                        CreatedAt = ParseWithDefault(streamingChatMessageContent.Result.Metadata?["CreatedAt"]?.ToString()),
+                        SystemFingerprint = MetadataInfo(streamingChatMessageContent.Result.Metadata, "SystemFingerprint"),
+                        Model = streamingChatMessageContent.Result.ModelId,
+                        IsStreamed = true
+                    };
                 }
                 authorRole ??= streamingChatMessageContent.Result.Role;
                 fccBuilder.Append(streamingChatMessageContent.Result);
 
                 if (streamingChatMessageContent.Result.Metadata is not null)
                 {
-                    var outputTokens = GetOutputTokensFromMetadata(streamingChatMessageContent.Result.Metadata);
+                    var metadata = streamingChatMessageContent.Result.Metadata;
+
+                    if (metadata.TryGetValue("FinishReason", out var finishReasonObject) && finishReasonObject is not null)
+                    {
+                        yield return new FinishReasonResult
+                        {
+                            FinishReason = finishReasonObject,
+                            CompletionId = MetadataInfo(streamingChatMessageContent.Result.Metadata, "CompletionId"),
+                            CreatedAt = ParseWithDefault(streamingChatMessageContent.Result.Metadata?["CreatedAt"]?.ToString()),
+                            SystemFingerprint = MetadataInfo(streamingChatMessageContent.Result.Metadata, "SystemFingerprint"),
+                            Model = streamingChatMessageContent.Result.ModelId,
+                            IsStreamed = true
+                        };
+                    }
+
+                    var outputTokens = GetOutputTokensFromMetadata(metadata);
                     if (outputTokens is not null)
                     {
                         yield return new UsageResult
@@ -247,7 +307,11 @@ public static class ChatCompletionServiceExtentions
                             IsStreamed = true,
                             OutputTokenCount = outputTokens.OutputTokenCount,
                             InputTokenCount = outputTokens.InputTokenCount,
-                            TotalTokenCount = outputTokens.TotalTokenCount
+                            TotalTokenCount = outputTokens.TotalTokenCount,
+                            CompletionId = MetadataInfo(streamingChatMessageContent.Result.Metadata, "CompletionId"),
+                            CreatedAt = ParseWithDefault(streamingChatMessageContent.Result.Metadata?["CreatedAt"]?.ToString()),
+                            SystemFingerprint = MetadataInfo(streamingChatMessageContent.Result.Metadata, "SystemFingerprint"),
+                            Model = streamingChatMessageContent.Result.ModelId,
                         };
                     }
                 }
@@ -269,8 +333,15 @@ public static class ChatCompletionServiceExtentions
 
             foreach (var functionCall in functionCalls)
             {
+
                 fcContent.Items.Add(functionCall);
-                yield return new FunctionCall { FunctionName = functionCall.FunctionName, Id = functionCall.Id, Arguments = functionCall.Arguments };
+                yield return new FunctionCall
+                {
+                    FunctionName = functionCall.FunctionName,
+                    Id = functionCall.Id,
+                    Arguments = functionCall.Arguments,
+                    IsStreamed = true
+                };
                 // user can remove function call from chat history
                 // user removed all function calls
                 if (!chatHistory.Contains(fcContent)) break;
@@ -289,7 +360,12 @@ public static class ChatCompletionServiceExtentions
             IsStreamed = true,
             IsEmptyResponse = IsEmptyResponse(responseStringBuilder),
             IsError = isErorr,
-            FunctionCalls = functionCalls.Select(fc => new FunctionCall { FunctionName = fc.FunctionName, Id = fc.Id, Arguments = fc.Arguments }).ToArray()
+            CalledFullFunctions = functionCalls.Select(fc => new CalledFunction
+            {
+                FunctionName = fc.FunctionName,
+                Id = fc.Id,
+                PluginName = fc.PluginName
+            }).ToArray()
         };
     }
 
@@ -315,10 +391,30 @@ public static class ChatCompletionServiceExtentions
             var syncedCallResult = callingLLMResult.Result;
             if (syncedCallResult.Content is not null)
             {
-                yield return new TextResult { Text = syncedCallResult.Content };
+                yield return new TextResult
+                {
+                    Text = syncedCallResult.Content,
+                    CompletionId = MetadataInfo(callingLLMResult.Result.Metadata, "CompletionId"),
+                    CreatedAt = ParseWithDefault(callingLLMResult.Result.Metadata?["CreatedAt"]?.ToString()),
+                    SystemFingerprint = MetadataInfo(callingLLMResult.Result.Metadata, "SystemFingerprint"),
+                    Model = callingLLMResult.Result.ModelId,
+                    IsStreamed = false
+                };
             }
             if (syncedCallResult.Metadata is not null)
             {
+                if (syncedCallResult.Metadata.TryGetValue("FinishReason", out var finishReasonObject) && finishReasonObject is not null)
+                {
+                    yield return new FinishReasonResult
+                    {
+                        FinishReason = finishReasonObject,
+                        CompletionId = MetadataInfo(syncedCallResult.Metadata, "CompletionId"),
+                        CreatedAt = ParseWithDefault(syncedCallResult.Metadata?["CreatedAt"]?.ToString()),
+                        SystemFingerprint = MetadataInfo(syncedCallResult.Metadata, "SystemFingerprint"),
+                        Model = syncedCallResult.ModelId,
+                        IsStreamed = true
+                    };
+                }
                 var outputTokens = GetOutputTokensFromMetadata(syncedCallResult.Metadata);
                 if (outputTokens is not null)
                 {
@@ -327,7 +423,11 @@ public static class ChatCompletionServiceExtentions
                         IsStreamed = false,
                         OutputTokenCount = outputTokens.OutputTokenCount,
                         InputTokenCount = outputTokens.InputTokenCount,
-                        TotalTokenCount = outputTokens.TotalTokenCount
+                        TotalTokenCount = outputTokens.TotalTokenCount,
+                        CompletionId = MetadataInfo(callingLLMResult.Result.Metadata, "CompletionId"),
+                        CreatedAt = ParseWithDefault(callingLLMResult.Result.Metadata?["CreatedAt"]?.ToString()),
+                        SystemFingerprint = MetadataInfo(callingLLMResult.Result.Metadata, "SystemFingerprint"),
+                        Model = callingLLMResult.Result.ModelId,
                     };
                 }
             }
@@ -339,7 +439,13 @@ public static class ChatCompletionServiceExtentions
 
                 foreach (FunctionCallContent functionCall in syncFunctionCalls)
                 {
-                    yield return new FunctionCall { FunctionName = functionCall.FunctionName, Id = functionCall.Id, Arguments = functionCall.Arguments };
+                    yield return new FunctionCall
+                    {
+                        FunctionName = functionCall.FunctionName,
+                        Id = functionCall.Id,
+                        Arguments = functionCall.Arguments,
+                        IsStreamed = false
+                    };
                     // user can remove function call from chat history
                     // user removed all function calls
                     if (!chatHistory.Contains(syncedCallResult)) break;
@@ -358,7 +464,12 @@ public static class ChatCompletionServiceExtentions
                 IsStreamed = false,
                 IsEmptyResponse = string.IsNullOrWhiteSpace(syncedCallResult.Content?.ToString().Trim()),
                 IsError = false,
-                FunctionCalls = syncFunctionCalls.Select(fc => new FunctionCall { FunctionName = fc.FunctionName, Id = fc.Id, Arguments = fc.Arguments }).ToArray()
+                CalledFullFunctions = syncFunctionCalls.Select(fc => new CalledFunction
+                {
+                    FunctionName = fc.FunctionName,
+                    Id = fc.Id,
+                    PluginName = fc.PluginName
+                }).ToArray()
             };
         }
         if (result is CallingLLMExceptionResult callingLLMExceptionResult)
@@ -370,7 +481,7 @@ public static class ChatCompletionServiceExtentions
                 IsError = true,
                 IsEmptyResponse = true,
                 IsStreamed = false,
-                FunctionCalls = []
+                CalledFullFunctions = []
             };
         }
     }
@@ -448,5 +559,30 @@ public static class ChatCompletionServiceExtentions
     private static bool IsEmptyResponse(StringBuilder responseStringBuilder)
     {
         return string.IsNullOrWhiteSpace(responseStringBuilder.ToString());
+    }
+
+    private static DateTime? ParseWithDefault(string? dateTimeString, DateTime? defaultValue = null)
+    {
+        if (string.IsNullOrWhiteSpace(dateTimeString))
+        {
+            return defaultValue;
+        }
+
+        if (DateTime.TryParse(dateTimeString, out var dateTime))
+        {
+            return dateTime;
+        }
+
+        return defaultValue;
+    }
+
+    private static string? MetadataInfo(IReadOnlyDictionary<string, object?>? metadata, string key)
+    {
+        if (metadata is not null && metadata.TryGetValue(key, out var value))
+        {
+            return value?.ToString();
+        }
+
+        return null;
     }
 }
