@@ -146,6 +146,8 @@ public class ParallelExecutionSample
                 // When Task.WhenAll completes, t.Exception will be an AggregateException
                 // containing all the exceptions that were thrown by the tasks
                 // If any task failed, t.Exception will not be null
+                // Propagated exception will be thrown during the read operation
+                // on the channel reader, so we can complete the channel writer with it
                 chunkChannel.Writer.TryComplete(t.Exception?.Flatten());
             }, cancellationToken);
 
