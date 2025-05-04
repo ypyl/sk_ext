@@ -39,7 +39,37 @@ var settings = new PromptExecutionSettings();
 
 await foreach (var result in chatCompletionService.StreamChatMessagesWithFunctions(kernel, chatHistory, settings))
 {
-    // Handle the result
+    // Handle different types of results
+    switch (result)
+    {
+        case TextResult textResult:
+            Console.Write(textResult.Text);
+            break;
+
+        case FunctionCall functionCall:
+            Console.WriteLine($"\nCalling function: {functionCall.FunctionName}");
+            break;
+
+        case FunctionExecutionResult functionResult:
+            Console.WriteLine($"Function result: {functionResult.Result}");
+            break;
+
+        case StreamedFunctionExecutionResult streamedResult:
+            Console.WriteLine($"Streaming result: {streamedResult.Result}");
+            break;
+
+        case FunctionExceptionResult exceptionResult:
+            Console.WriteLine($"Function error: {exceptionResult.Exception.Message}");
+            break;
+
+        case UsageResult usageResult:
+            Console.WriteLine($"Tokens used: {usageResult.TotalTokenCount}");
+            break;
+
+        case CallingLLM callingLLM:
+            Console.WriteLine("Calling LLM...");
+            break;
+    }
 }
 ```
 
