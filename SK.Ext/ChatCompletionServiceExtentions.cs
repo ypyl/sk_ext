@@ -18,16 +18,6 @@ public record TextResult : IContentResult
     public required bool IsStreamed { get; init; }
 }
 
-public record StreamedTextResult : IContentResult
-{
-    public required string Text { get; init; }
-    public required DateTime? CreatedAt { get; init; }
-    public required string? CompletionId { get; init; }
-    public required string? SystemFingerprint { get; init; }
-    public required string? Model { get; init; }
-    public required bool IsStreamed { get; init; }
-}
-
 public record FunctionCall : IContentResult
 {
     public required string? Id { get; init; }
@@ -269,7 +259,7 @@ public static class ChatCompletionServiceExtentions
                 if (streamingChatMessageContent.Result.Content is not null)
                 {
                     responseStringBuilder.Append(streamingChatMessageContent.Result.Content);
-                    yield return new StreamedTextResult
+                    yield return new TextResult
                     {
                         Text = streamingChatMessageContent.Result.Content,
                         CompletionId = MetadataInfo(streamingChatMessageContent.Result.Metadata, "CompletionId"),
