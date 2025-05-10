@@ -1,6 +1,5 @@
 using System.ClientModel;
 using System.Runtime.CompilerServices;
-using System.Threading.Channels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
@@ -12,7 +11,7 @@ public class ParallelExecutionSample
 {
     public static async Task Run(string groqKey)
     {
-        await foreach (var (taskId, content) in MergeWithTaskId([
+        IEnumerable<(int taskId, IAsyncEnumerable<IContentResult> stream)> tasksToParalel = [
             (1, SetUpWeatherAssistantKernel(groqKey, "Boston", "25 and snowing")),
             (2, SetUpWeatherAssistantKernel(groqKey, "London", "15 and foggy")),
             (3, SetUpWeatherAssistantKernel(groqKey, "Miami", "95 and humid")),
@@ -20,7 +19,8 @@ public class ParallelExecutionSample
             (5, SetUpWeatherAssistantKernel(groqKey, "Tokyo", "85 and stormy")),
             (6, SetUpWeatherAssistantKernel(groqKey, "Sydney", "65 and windy")),
             (7, SetUpWeatherAssistantKernel(groqKey, "Tel Aviv", "90 and clear"))
-            ]))
+        ];
+        await foreach (var (taskId, content) in tasksToParalel.MergeWithTaskId())
         {
             ProcessingStreamResults(content, taskId);
         }
@@ -30,11 +30,11 @@ public class ParallelExecutionSample
     {
         Console.Write(content switch
         {
-            TextResult textResult
-                => $"[Text Result {taskId}] {textResult.Text}",
+            TextResult t when !t.IsStreamed
+                => $"[Text Result {taskId}] {t.Text}",
 
-            StreamedTextResult streamedTextResult
-                => $"{streamedTextResult.Text}",
+            TextResult t when t.IsStreamed
+                => $"{t.Text}",
 
             CallingLLM callingLLM
                 => $"[Calling LLM {taskId}] Streamed: {callingLLM.IsStreamed}\n",
@@ -110,51 +110,5 @@ public class ParallelExecutionSample
         }
     }
 
-    private static async IAsyncEnumerable<(int taskId, T item)> MergeWithTaskId<T>(
-        IEnumerable<(int taskId, IAsyncEnumerable<T> stream)> streams,
-        int batchSize = 3,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        var chunks = streams.Chunk(batchSize);
-        foreach (var chunk in chunks)
-        {
-            var chunkChannel = Channel.CreateUnbounded<(int taskId, T item)>();
-            var chunkTasks = new List<Task>();
 
-            foreach (var (taskId, stream) in chunk)
-            {
-                chunkTasks.Add(Task.Run(async () =>
-                {
-                    try
-                    {
-                        await foreach (var item in stream.WithCancellation(cancellationToken))
-                        {
-                            await chunkChannel.Writer.WriteAsync((taskId, item), cancellationToken);
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        // Don't complete the channel writer on exception
-                        // Just let the task fail and continue with other tasks
-                        throw;
-                    }
-                }, cancellationToken));
-            }
-
-            _ = Task.WhenAll(chunkTasks).ContinueWith(t =>
-            {
-                // When Task.WhenAll completes, t.Exception will be an AggregateException
-                // containing all the exceptions that were thrown by the tasks
-                // If any task failed, t.Exception will not be null
-                // Propagated exception will be thrown during the read operation
-                // on the channel reader, so we can complete the channel writer with it
-                chunkChannel.Writer.TryComplete(t.Exception?.Flatten());
-            }, cancellationToken);
-
-            await foreach (var item in chunkChannel.Reader.ReadAllAsync(cancellationToken))
-            {
-                yield return item;
-            }
-        }
-    }
 }

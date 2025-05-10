@@ -151,7 +151,7 @@ public class ChatHistoryExtentionsTests
         Assert.NotNull(updatedMessage);
         var combinedFunctionCall = updatedMessage.Items.OfType<FunctionCallContent>().FirstOrDefault();
         Assert.NotNull(combinedFunctionCall);
-        Assert.True(combinedFunctionCall.Arguments.ContainsName("param1"));
+        Assert.True(combinedFunctionCall.Arguments!.ContainsName("param1"));
         Assert.Equal("value1;value2", combinedFunctionCall.Arguments["param1"]);
     }
 
@@ -236,7 +236,7 @@ public class ChatHistoryExtentionsTests
         Assert.NotNull(updatedMessage);
         var combinedFunctionCall = updatedMessage.Items.OfType<FunctionCallContent>().FirstOrDefault();
         Assert.NotNull(combinedFunctionCall);
-        Assert.True(combinedFunctionCall.Arguments.ContainsName("param1"));
+        Assert.True(combinedFunctionCall.Arguments!.ContainsName("param1"));
         Assert.Equal("value1;value2", combinedFunctionCall.Arguments["param1"]);
 
         var toolMessages = chatHistory.Where(m => m.Role == AuthorRole.Tool).ToList();
@@ -286,12 +286,12 @@ public class ChatHistoryExtentionsTests
         Assert.Equal(2, updatedMessage.Count);
 
         var combinedFunctionCalls1 = updatedMessage[0].Items.OfType<FunctionCallContent>().ToList();
-        Assert.True(combinedFunctionCalls1[0].Arguments.ContainsName("param1"));
-        Assert.Equal("value1;value2", combinedFunctionCalls1[0].Arguments["param1"]);
+        Assert.True(combinedFunctionCalls1[0].Arguments!.ContainsName("param1"));
+        Assert.Equal("value1;value2", combinedFunctionCalls1[0].Arguments!["param1"]);
 
         var combinedFunctionCalls2 = updatedMessage[1].Items.OfType<FunctionCallContent>().ToList();
-        Assert.True(combinedFunctionCalls2[0].Arguments.ContainsName("param2"));
-        Assert.Equal("value3;value4", combinedFunctionCalls2[0].Arguments["param2"]);
+        Assert.True(combinedFunctionCalls2[0].Arguments!.ContainsName("param2"));
+        Assert.Equal("value3;value4", combinedFunctionCalls2[0].Arguments!["param2"]);
 
         var toolMessages = chatHistory.Where(m => m.Role == AuthorRole.Tool).ToList();
         Assert.Equal(2, toolMessages.Count);
