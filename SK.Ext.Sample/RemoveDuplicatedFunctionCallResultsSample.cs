@@ -34,7 +34,7 @@ public class RemoveDuplicatedFunctionCallResultsSample
                 => $"[Calling LLM] Streamed: {callingLLM.IsStreamed}\n",
 
             FunctionCall functionCall
-                => $"[Function Call] {functionCall.FunctionName}\n" +
+                => $"[Function Call] {functionCall.Name}\n" +
                    string.Join("\n", (functionCall.Arguments ?? new Dictionary<string, object?>()).Select(arg => $"{arg.Key}: {arg.Value}")) +
                    (functionCall.Arguments?.Any() == true ? "\n" : string.Empty),
 

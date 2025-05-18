@@ -22,10 +22,7 @@ public class CompletionSample
         Console.Write(content switch
         {
             TextResult textResult
-                => $"[Text Result] {textResult.Text}",
-
-            StreamedTextResult streamedTextResult
-                => $"{streamedTextResult.Text}",
+                => textResult.IsStreamed ? $"{textResult.Text}" : $"[Text Result] {textResult.Text}",
 
             FinishReasonResult finishReasonResult
                 => $"[Finish Reason] {finishReasonResult.FinishReason}\n",
@@ -34,7 +31,7 @@ public class CompletionSample
                 => $"[Calling LLM] Streamed: {callingLLM.IsStreamed}\n",
 
             FunctionCall functionCall
-                => $"[Function Call] {functionCall.FunctionName}\n" +
+                => $"[Function Call] {functionCall.Name}\n" +
                    string.Join("\n", (functionCall.Arguments ?? new Dictionary<string, object?>()).Select(arg => $"{arg.Key}: {arg.Value}")) +
                    (functionCall.Arguments?.Any() == true ? "\n" : string.Empty),
 
@@ -96,7 +93,7 @@ public class CompletionSample
             yield return content;
             if (content is FunctionExecutionResult fr)
             {
-                if (fr.FunctionName == "GetWeatherForCity")
+                if (fr.Name == "GetWeatherForCity")
                 {
                     chatHistory.ReplaceFunctionCallResult(fr.Id, weatherCondition);
                 }

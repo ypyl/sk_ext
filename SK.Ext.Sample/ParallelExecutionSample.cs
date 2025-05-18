@@ -40,7 +40,7 @@ public class ParallelExecutionSample
                 => $"[Calling LLM {taskId}] Streamed: {callingLLM.IsStreamed}\n",
 
             FunctionCall functionCall
-                => $"[Function Call {taskId}] {functionCall.FunctionName}\n" +
+                => $"[Function Call {taskId}] {functionCall.Name}\n" +
                    string.Join("\n", (functionCall.Arguments ?? new Dictionary<string, object?>()).Select(arg => $"{arg.Key}: {arg.Value}")) +
                    (functionCall.Arguments?.Any() == true ? "\n" : string.Empty),
 
@@ -102,7 +102,7 @@ public class ParallelExecutionSample
             yield return content;
             if (content is FunctionExecutionResult fr)
             {
-                if (fr.FunctionName == "GetWeatherForCity")
+                if (fr.Name == "GetWeatherForCity")
                 {
                     chatHistory.ReplaceFunctionCallResult(fr.Id, weatherCondition);
                 }

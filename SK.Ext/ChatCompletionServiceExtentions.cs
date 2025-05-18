@@ -18,19 +18,32 @@ public record TextResult : IContentResult
     public required bool IsStreamed { get; init; }
 }
 
+/// <summary>
+/// Return structured output result
+/// Only when using <see cref="CompletionAgent"/>
+/// </summary>
+/// <typeparam name="T"></typeparam>
+public record StructuredResult<T> : IContentResult
+{
+    public required T? Result { get; init; }
+    public required DateTime? CreatedAt { get; init; }
+    public required bool IsStreamed { get; init; }
+}
+
 public record FunctionCall : IContentResult
 {
     public required string? Id { get; init; }
-    public required string FunctionName { get; init; }
+    public required string Name { get; init; }
     public required IDictionary<string, object?>? Arguments { get; init; }
     public required bool IsStreamed { get; init; }
+    public required string? PluginName { get; init; }
 }
 
 public record FunctionExecutionResult : IContentResult
 {
     public required string? Id { get; init; }
     public required object? Result { get; init; }
-    public required string? FunctionName { get; init; }
+    public required string? Name { get; init; }
     public required string? PluginName { get; init; }
 }
 
@@ -327,7 +340,8 @@ public static class ChatCompletionServiceExtentions
                 fcContent.Items.Add(functionCall);
                 yield return new FunctionCall
                 {
-                    FunctionName = functionCall.FunctionName,
+                    Name = functionCall.FunctionName,
+                    PluginName = functionCall.PluginName,
                     Id = functionCall.Id,
                     Arguments = functionCall.Arguments,
                     IsStreamed = true
@@ -431,7 +445,8 @@ public static class ChatCompletionServiceExtentions
                 {
                     yield return new FunctionCall
                     {
-                        FunctionName = functionCall.FunctionName,
+                        Name = functionCall.FunctionName,
+                        PluginName = functionCall.PluginName,
                         Id = functionCall.Id,
                         Arguments = functionCall.Arguments,
                         IsStreamed = false
@@ -517,7 +532,7 @@ public static class ChatCompletionServiceExtentions
             {
                 Id = functionResult.CallId,
                 Result = finalResult,
-                FunctionName = functionResult.FunctionName,
+                Name = functionResult.FunctionName,
                 PluginName = functionResult.PluginName
             };
         }
@@ -528,7 +543,7 @@ public static class ChatCompletionServiceExtentions
             {
                 Id = functionResult.CallId,
                 Result = functionResult.Result,
-                FunctionName = functionResult.FunctionName,
+                Name = functionResult.FunctionName,
                 PluginName = functionResult.PluginName
             };
         }
