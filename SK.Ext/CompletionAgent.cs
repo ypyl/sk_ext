@@ -14,18 +14,27 @@ public interface ICompletionPlugin
     public string Name { get; }
     public string FunctionDescription { get; }
     public IEnumerable<PluginParameter> Parameters { get; }
-    public string ReturnDescription { get; }
+    public PluginReturnMetadata Return { get; }
     public bool IsRequired { get; }
+}
+
+public class PluginReturnMetadata
+{
+    public string Description { get; init; } = string.Empty;
+    public Type? Type { get; init; } = null;
 }
 
 public abstract class PluginParameter
 {
     public required string Name { get; init; }
-
 }
+
 public class ModelParameter : PluginParameter
 {
     public string Description { get; init; } = string.Empty;
+    public object? DefaultValue { get; init; } = null;
+    public Type? Type { get; init; } = null;
+    public bool IsRequired { get; init; } = false;
 }
 
 public class RuntimeParameter : PluginParameter
@@ -57,6 +66,7 @@ public enum CompletionRole
 public interface ICompletionMessage
 {
     CompletionRole Role { get; }
+    IDictionary<string, object>? Metadata { get; set; }
 }
 
 public class CompletionImage : ICompletionMessage
@@ -64,6 +74,7 @@ public class CompletionImage : ICompletionMessage
     public CompletionRole Role { get; set; }
     public ReadOnlyMemory<byte> Data { get; set; }
     public string? MimeType { get; set; }
+    public IDictionary<string, object>? Metadata { get; set; } = new Dictionary<string, object>();
 }
 
 public class CompletionAudio : ICompletionMessage
@@ -71,22 +82,34 @@ public class CompletionAudio : ICompletionMessage
     public CompletionRole Role { get; set; }
     public ReadOnlyMemory<byte> Data { get; set; }
     public string? MimeType { get; set; }
+    public IDictionary<string, object>? Metadata { get; set; } = new Dictionary<string, object>();
 }
 
 public class CompletionText : ICompletionMessage
 {
     public CompletionRole Role { get; set; }
     public string? Content { get; set; }
+    public IDictionary<string, object>? Metadata { get; set; } = new Dictionary<string, object>();
+}
+
+public class CompletionFunctionCall : ICompletionMessage
+{
+    public CompletionRole Role { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string PluginName { get; set; } = string.Empty;
+    public IDictionary<string, object?> Arguments { get; set; } = new Dictionary<string, object?>();
+    public IDictionary<string, object>? Metadata { get; set; } = new Dictionary<string, object>();
+    public object? Result { get; set; } = null;
 }
 
 public class CompletionCollection : ICompletionMessage
 {
     public CompletionRole Role { get; set; }
-    public List<ICompletionMessage> Messages { get; } = new();
+    public List<ICompletionMessage> Messages { get; } = [];
+    public IDictionary<string, object>? Metadata { get; set; } = new Dictionary<string, object>();
 }
 
-public record CompletionContext(CompletionHistory History,
-    CompletionSettings Settings, IEnumerable<ICompletionPlugin> Plugins);
+public record CompletionContext(CompletionHistory History, CompletionSettings Settings, IEnumerable<ICompletionPlugin> Plugins);
 
 public class CompletionContextBuilder
 {
@@ -108,7 +131,6 @@ public class CompletionContextBuilder
         _settings = settings;
         return this;
     }
-
     public CompletionContextBuilder WithPlugins(IEnumerable<ICompletionPlugin> plugins)
     {
         _plugins = plugins;
@@ -231,15 +253,16 @@ public class CompletionAgent
     private static KernelFunction CreateKernelFunction(Kernel kernel, ICompletionPlugin completionPlugin)
     {
         var parameters = completionPlugin.Parameters.OfType<ModelParameter>()
-            .Select(x => new KernelParameterMetadata(x.Name) { Description = x.Description });
+            .Select(x => new KernelParameterMetadata(x.Name) { Description = x.Description, DefaultValue = x.DefaultValue, ParameterType = x.Type, IsRequired = x.IsRequired });
         var function = kernel.CreateFunctionFromMethod(
             completionPlugin.FunctionDelegate,
             completionPlugin.Name,
             completionPlugin.FunctionDescription,
             parameters,
-            new KernelReturnParameterMetadata
+            new KernelReturnParameterMetadata()
             {
-                Description = completionPlugin.ReturnDescription
+                Description = completionPlugin.Return.Description,
+                ParameterType = completionPlugin.Return.Type,
             });
         var runtimeParameters = completionPlugin.Parameters.OfType<RuntimeParameter>();
         if (runtimeParameters.Any())
@@ -269,11 +292,41 @@ public class CompletionAgent
         var chatHistory = new ChatHistory();
         foreach (var message in history.Messages)
         {
-            chatHistory.AddMessage(
-                MapCompletionRoleToAuthorRole(message.Role),
-                MapCompletionMessageToKernelContent(message));
+            if (message is CompletionFunctionCall functionCall)
+            {
+                SimulateFunctionCall(chatHistory, functionCall);
+            }
+            else if (message is CompletionCollection completionCollection && completionCollection.Messages.All(x => x is not CompletionFunctionCall))
+            {
+                var functionCalls = completionCollection.Messages.OfType<CompletionFunctionCall>().Select(functionCall => new SimulatedFunctionCall
+                {
+                    Arguments = functionCall.Arguments,
+                    FunctionName = functionCall.Name,
+                    PluginName = functionCall.PluginName,
+                    Result = functionCall.Result,
+                });
+                chatHistory.SimulateFunctionCalls(functionCalls);
+            }
+            else
+            {
+                chatHistory.AddMessage(
+                    MapCompletionRoleToAuthorRole(message.Role),
+                    MapCompletionMessageToKernelContent(message));
+            }
         }
         return chatHistory;
+
+        static void SimulateFunctionCall(ChatHistory chatHistory, CompletionFunctionCall functionCall)
+        {
+            var simulatedFunctionCall = new SimulatedFunctionCall
+            {
+                Arguments = functionCall.Arguments,
+                FunctionName = functionCall.Name,
+                PluginName = functionCall.PluginName,
+                Result = functionCall.Result,
+            };
+            chatHistory.SimulateFunctionCalls([simulatedFunctionCall]);
+        }
     }
 
     private static ChatMessageContentItemCollection MapCompletionMessageToKernelContent(ICompletionMessage message)

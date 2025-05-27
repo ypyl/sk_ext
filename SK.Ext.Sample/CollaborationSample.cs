@@ -120,7 +120,7 @@ public class CollaborationSample
             {
                 result.Append(textResult.Text);
             }
-            if (content is StreamedTextResult streamedTextContent)
+            if (content is TextResult streamedTextContent && streamedTextContent.IsStreamed)
             {
                 result.Append(streamedTextContent.Text);
             }

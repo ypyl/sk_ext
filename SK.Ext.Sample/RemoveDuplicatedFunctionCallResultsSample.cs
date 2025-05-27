@@ -22,10 +22,7 @@ public class RemoveDuplicatedFunctionCallResultsSample
         Console.Write(content switch
         {
             TextResult textResult
-                => $"[Text Result] {textResult.Text}",
-
-            StreamedTextResult streamedTextResult
-                => $"{streamedTextResult.Text}",
+                => textResult.IsStreamed ? $"{textResult.Text}" : $"[Text Result] {textResult.Text}",
 
             FinishReasonResult finishReasonResult
                 => $"[Finish Reason] {finishReasonResult.FinishReason}\n",

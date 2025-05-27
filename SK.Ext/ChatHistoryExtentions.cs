@@ -8,7 +8,7 @@ public readonly struct SimulatedFunctionCall
     public required string FunctionName { get; init; }
     public required string PluginName { get; init; }
     public required IDictionary<string, object?> Arguments { get; init; }
-    public required object Result { get; init; }
+    public required object? Result { get; init; }
 }
 
 public static class ChatHistoryExtentions
@@ -50,7 +50,7 @@ public static class ChatHistoryExtentions
 
     public static void SimulateFunctionCalls(this ChatHistory chatHistory, IEnumerable<SimulatedFunctionCall> functionCallToSimulates)
     {
-        if (functionCallToSimulates.Count() == 0)
+        if (!functionCallToSimulates.Any())
         {
             return;
         }

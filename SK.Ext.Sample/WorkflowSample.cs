@@ -92,7 +92,7 @@ public class WorkflowSample
 
         await foreach (var content in chatCompletionService.GetStreamingChatMessageContentsWithFunctions(kernel, chatHistory, settings, cancellationToken))
         {
-            if (content is StreamedTextResult textResult)
+            if (content is TextResult textResult && textResult.IsStreamed)
             {
                 Console.Write(textResult.Text);
             }

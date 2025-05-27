@@ -2,7 +2,7 @@
 
 class Program
 {
-    const string groqKey = "<<KEY>>";
+    const string groqKey = "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";
 
     static async Task Main(string[] args)
     {
@@ -10,7 +10,7 @@ class Program
         {
             PrintUsage();
             Console.WriteLine("No sample name provided. Running default sample:.");
-            await RunSample("completion");
+            await RunSample("agent");
             return;
         }
 
@@ -22,6 +22,9 @@ class Program
     {
         switch (sampleName)
         {
+            case "agent":
+                await CompletionAgentSample.Run(groqKey);
+                break;
             case "duplication":
                 await RemoveDuplicatedFunctionCallResultsSample.Run(groqKey);
                 break;
