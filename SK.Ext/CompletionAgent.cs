@@ -288,18 +288,12 @@ public class CompletionAgent
         {
             if (message is CompletionFunctionCall functionCall)
             {
-                SimulateFunctionCall(chatHistory, functionCall);
+                AddFunctionCallsToChatHistory(chatHistory, [functionCall]);
             }
             else if (message is CompletionCollection completionCollection && completionCollection.Messages.All(x => x is not CompletionFunctionCall))
             {
-                var functionCalls = completionCollection.Messages.OfType<CompletionFunctionCall>().Select(functionCall => new SimulatedFunctionCall
-                {
-                    Arguments = functionCall.Arguments,
-                    FunctionName = functionCall.Name,
-                    PluginName = functionCall.PluginName,
-                    Result = functionCall.Result,
-                });
-                chatHistory.SimulateFunctionCalls(functionCalls);
+                var functionCalls = completionCollection.Messages.OfType<CompletionFunctionCall>();
+                AddFunctionCallsToChatHistory(chatHistory, functionCalls);
             }
             else
             {
@@ -310,16 +304,16 @@ public class CompletionAgent
         }
         return chatHistory;
 
-        static void SimulateFunctionCall(ChatHistory chatHistory, CompletionFunctionCall functionCall)
+        static void AddFunctionCallsToChatHistory(ChatHistory chatHistory, IEnumerable<CompletionFunctionCall> functionCalls)
         {
-            var simulatedFunctionCall = new SimulatedFunctionCall
+            var simulatedFunctionCalls = functionCalls.Select(functionCall => new SimulatedFunctionCall
             {
                 Arguments = functionCall.Arguments,
                 FunctionName = functionCall.Name,
                 PluginName = functionCall.PluginName,
                 Result = functionCall.Result,
-            };
-            chatHistory.SimulateFunctionCalls([simulatedFunctionCall]);
+            });
+            chatHistory.SimulateFunctionCalls(simulatedFunctionCalls);
         }
     }
 
