@@ -42,7 +42,7 @@ public class RuntimeParameter : PluginParameter
     public object? Value { get; init; } = null;
 }
 
-public class CompletionSettings
+public record CompletionSettings
 {
     public double Temperature { get; init; } = 0.7;
     public int MaxTokens { get; init; } = 1000;
@@ -66,7 +66,6 @@ public enum CompletionRole
 public interface ICompletionMessage
 {
     CompletionRole Role { get; }
-    IDictionary<string, object>? Metadata { get; set; }
 }
 
 public class CompletionImage : ICompletionMessage
@@ -74,7 +73,6 @@ public class CompletionImage : ICompletionMessage
     public CompletionRole Role { get; set; }
     public ReadOnlyMemory<byte> Data { get; set; }
     public string? MimeType { get; set; }
-    public IDictionary<string, object>? Metadata { get; set; } = new Dictionary<string, object>();
 }
 
 public class CompletionAudio : ICompletionMessage
@@ -82,14 +80,12 @@ public class CompletionAudio : ICompletionMessage
     public CompletionRole Role { get; set; }
     public ReadOnlyMemory<byte> Data { get; set; }
     public string? MimeType { get; set; }
-    public IDictionary<string, object>? Metadata { get; set; } = new Dictionary<string, object>();
 }
 
 public class CompletionText : ICompletionMessage
 {
     public CompletionRole Role { get; set; }
     public string? Content { get; set; }
-    public IDictionary<string, object>? Metadata { get; set; } = new Dictionary<string, object>();
 }
 
 public class CompletionFunctionCall : ICompletionMessage
@@ -98,7 +94,6 @@ public class CompletionFunctionCall : ICompletionMessage
     public string Name { get; set; } = string.Empty;
     public string PluginName { get; set; } = string.Empty;
     public IDictionary<string, object?> Arguments { get; set; } = new Dictionary<string, object?>();
-    public IDictionary<string, object>? Metadata { get; set; } = new Dictionary<string, object>();
     public object? Result { get; set; } = null;
 }
 
@@ -106,7 +101,6 @@ public class CompletionCollection : ICompletionMessage
 {
     public CompletionRole Role { get; set; }
     public List<ICompletionMessage> Messages { get; } = [];
-    public IDictionary<string, object>? Metadata { get; set; } = new Dictionary<string, object>();
 }
 
 public record CompletionContext(CompletionHistory History, CompletionSettings Settings, IEnumerable<ICompletionPlugin> Plugins);
