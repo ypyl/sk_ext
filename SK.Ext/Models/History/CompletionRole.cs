@@ -4,5 +4,4 @@ public enum CompletionRole
 {
     User,
     Assistant,
-    System
 }

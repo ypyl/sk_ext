@@ -2,5 +2,6 @@ namespace SK.Ext.Models.History;
 
 public class SystemIdentity : ISenderIdentity
 {
-    public CompletionRole Role { get; } = CompletionRole.System;
+    private SystemIdentity() { }
+    public static SystemIdentity Instance { get; } = new SystemIdentity();
 }

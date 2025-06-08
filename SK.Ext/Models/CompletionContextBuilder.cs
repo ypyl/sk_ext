@@ -8,7 +8,7 @@ public class CompletionContextBuilder
 {
     private CompletionHistory _history = new()
     {
-        Messages = [new CompletionText { Identity = new SystemIdentity(), Content = "You are a helpful assistant." }]
+        Messages = [new CompletionText { Identity = SystemIdentity.Instance, Content = "You are a helpful assistant." }]
     };
     private CompletionSettings _settings = new();
     private IEnumerable<ICompletionPlugin> _plugins = [];

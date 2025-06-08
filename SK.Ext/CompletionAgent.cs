@@ -205,8 +205,13 @@ public class CompletionAgent(IChatCompletionService chatCompletionService) : ICo
     {
         return identity switch
         {
-            UserIdentity => AuthorRole.User,
-            AssistantIdentity => AuthorRole.Assistant,
+            AgentIdentity agentIdentity =>
+                agentIdentity.Role switch
+                {
+                    CompletionRole.User => AuthorRole.User,
+                    CompletionRole.Assistant => AuthorRole.Assistant,
+                    _ => throw new ArgumentOutOfRangeException(nameof(identity), agentIdentity.Role, null)
+                },
             SystemIdentity => AuthorRole.System,
             _ => throw new ArgumentOutOfRangeException(nameof(identity), identity, null)
         };

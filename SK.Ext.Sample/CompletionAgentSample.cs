@@ -22,7 +22,7 @@ public class CompletionAgentSample
             [
                 new CompletionText
                 {
-                    Identity = new UserIdentity(),
+                    Identity = AgentIdentity.User,
                     Content = "What is the capital of France?"
                 }
             ]
@@ -30,11 +30,11 @@ public class CompletionAgentSample
 
         await foreach (var content in agent.Completion(context, default))
         {
-            ProcessingStreamResults(content);
+            ProcessContentResults(content);
         }
     }
 
-    private static void ProcessingStreamResults(IContentResult content)
+    private static void ProcessContentResults(IContentResult content)
     {
         Console.Write(content switch
         {
