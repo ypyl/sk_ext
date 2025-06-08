@@ -2,19 +2,17 @@ using FakeItEasy;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using SK.Ext.Models;
-using SK.Ext.Models.History;
 using SK.Ext.Models.Result;
 
 namespace SK.Ext.Tests
 {
-    public class CompletionAgentTests
+    public class CompletionRuntimeTests
     {
         [Fact]
         public async Task CompletionAgent_ReturnsTextResult_ForSimpleTextCompletion()
         {
             // Arrange
             var fakeService = A.Fake<IChatCompletionService>();
-            var kernel = new Kernel();
             var context = new CompletionContextBuilder()
                 .WithInitialUserMessage("Hello, assistant!")
                 .Build();
@@ -29,11 +27,11 @@ namespace SK.Ext.Tests
                     A<CancellationToken>._))
                 .Returns(Task.FromResult<IReadOnlyList<ChatMessageContent>>(new List<ChatMessageContent> { chatMessageContent }));
 
-            var agent = new CompletionRuntime(fakeService);
+            var runtime = new CompletionRuntime(fakeService);
 
             // Act
             var results = new List<IContentResult>();
-            await foreach (var result in agent.Completion(context, CancellationToken.None))
+            await foreach (var result in runtime.Completion(context, CancellationToken.None))
             {
                 results.Add(result);
             }
