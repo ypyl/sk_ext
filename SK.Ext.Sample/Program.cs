@@ -2,7 +2,6 @@
 
 class Program
 {
-    const string groqKey = "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";
     const string defaultSample = "agent";
 
     static async Task Main(string[] args)
@@ -24,34 +23,34 @@ class Program
         switch (sampleName)
         {
             case "agent":
-                await CompletionAgentSample.Run(groqKey);
+                await CompletionAgentSample.Run(GroqConfig.Key);
                 break;
             case "duplication":
-                await RemoveDuplicatedFunctionCallResultsSample.Run(groqKey);
+                await RemoveDuplicatedFunctionCallResultsSample.Run(GroqConfig.Key);
                 break;
             case "completion":
-                await CompletionSample.Run(groqKey);
+                await CompletionSample.Run(GroqConfig.Key);
                 break;
             case "streamed":
-                await StreamedFunctionExecutionSample.Run(groqKey);
+                await StreamedFunctionExecutionSample.Run(GroqConfig.Key);
                 break;
             case "parallel":
-                await ParallelExecutionSample.Run(groqKey);
+                await ParallelExecutionSample.Run(GroqConfig.Key);
                 break;
             case "structured":
-                await StructuredOutputSample.Run(groqKey);
+                await StructuredOutputSample.Run(GroqConfig.Key);
                 break;
             case "workflow1":
-                await WorkflowSample.Run(groqKey, "What is the biggest city by population in Europe?");
+                await WorkflowSample.Run(GroqConfig.Key, "What is the biggest city by population in Europe?");
                 break;
             case "workflow2":
-                await WorkflowSample.Run(groqKey, "I need help optimizing a complex SQL database with millions of records. Consider indexing strategies, query performance, partitioning options, and maintenance plans. What should I do?");
+                await WorkflowSample.Run(GroqConfig.Key, "I need help optimizing a complex SQL database with millions of records. Consider indexing strategies, query performance, partitioning options, and maintenance plans. What should I do?");
                 break;
             case "collab1":
-                await CollaborationSample.Run(groqKey, "Write a comprehensive guide about machine learning basics.", default);
+                await CollaborationSample.Run(GroqConfig.Key, "Write a comprehensive guide about machine learning basics.", default);
                 break;
             case "collab2":
-                await CollaborationSample.Run(groqKey, "Explain the SOLID principles in software development with examples.", default);
+                await CollaborationSample.Run(GroqConfig.Key, "Explain the SOLID principles in software development with examples.", default);
                 break;
             default:
                 Console.WriteLine($"Unknown sample: {sampleName}");
