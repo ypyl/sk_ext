@@ -1,6 +1,4 @@
-using System.ClientModel;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using SK.Ext.Models;
 using SK.Ext.Models.History;
 using SK.Ext.Models.Result;
@@ -11,13 +9,11 @@ public class CompletionAgentSample
 {
     public static async Task Run(string groqKey)
     {
-        var builder = Kernel.CreateBuilder();
-        builder.AddOpenAIChatCompletion("llama-3.3-70b-versatile",
-            // Sample groq API key (revoked), replace with your own
-            new OpenAI.OpenAIClient(new ApiKeyCredential(groqKey), new OpenAI.OpenAIClientOptions { Endpoint = new Uri("https://api.groq.com/openai/v1") }));
-        Kernel kernel = builder.Build();
-
-        var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
+        OpenAIChatCompletionService chatCompletionService = new (
+            modelId: "llama-3.3-70b-versatile",
+            apiKey: groqKey,
+            httpClient: new HttpClient { BaseAddress = new Uri("https://api.groq.com/openai/v1") }
+        );
 
         var agent = new CompletionAgent(chatCompletionService);
         var context = new CompletionContextBuilder().WithHistory(new CompletionHistory
@@ -32,7 +28,7 @@ public class CompletionAgentSample
             ]
         }).Build();
 
-        await foreach (var content in agent.Completion(kernel, context, default))
+        await foreach (var content in agent.Completion(context, default))
         {
             ProcessingStreamResults(content);
         }

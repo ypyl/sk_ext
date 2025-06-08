@@ -11,35 +11,36 @@ using SK.Ext.Models.Result;
 
 namespace SK.Ext;
 
-public class CompletionAgent(IChatCompletionService chatCompletionService)
+// TODO allow to pass default set of plugins to the constructor
+public class CompletionAgent(IChatCompletionService chatCompletionService) : ICompletionAgent
 {
     private readonly IChatCompletionService _chatCompletionService = chatCompletionService;
+    private readonly Kernel _kernel = Kernel.CreateBuilder().Build();
 
-    public async IAsyncEnumerable<IContentResult> Completion(Kernel kernel, CompletionContext context,
+    public async IAsyncEnumerable<IContentResult> Completion(CompletionContext context,
         [EnumeratorCancellation] CancellationToken token)
     {
-        await foreach (var content in Completion<object>(kernel, context, token))
+        await foreach (var content in Completion<object>(context, token))
         {
             yield return content;
         }
     }
 
-    public async IAsyncEnumerable<IContentResult> Completion<T>(Kernel kernel, CompletionContext context,
+    public async IAsyncEnumerable<IContentResult> Completion<T>(CompletionContext context,
         [EnumeratorCancellation] CancellationToken token)
     {
-        await foreach (var content in InternalCompletion<T>(kernel, context, token))
+        await foreach (var content in InternalCompletion<T>(context, token))
         {
             yield return content;
         }
     }
 
-    private async IAsyncEnumerable<IContentResult> InternalCompletion<T>(Kernel kernel, CompletionContext context,
+    private async IAsyncEnumerable<IContentResult> InternalCompletion<T>(CompletionContext context,
         [EnumeratorCancellation] CancellationToken token)
     {
+        var k = _kernel.Clone();
         var structuredOutput = typeof(T) != typeof(object);
         var chatHistory = MapCompletionHistoryToChatHistory(context.History);
-
-        var k = kernel.Clone();
 
         var kernelFunctions = ImportPlugins(k, context.Plugins);
         var requiredToCallPlugins = context.Plugins.Where(x => x.IsRequired).ToList();
@@ -205,7 +206,7 @@ public class CompletionAgent(IChatCompletionService chatCompletionService)
         return identity switch
         {
             UserIdentity => AuthorRole.User,
-            AssistantIdentity  => AuthorRole.Assistant,
+            AssistantIdentity => AuthorRole.Assistant,
             SystemIdentity => AuthorRole.System,
             _ => throw new ArgumentOutOfRangeException(nameof(identity), identity, null)
         };
