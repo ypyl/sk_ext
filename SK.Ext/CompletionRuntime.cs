@@ -60,9 +60,7 @@ public class CompletionRuntime(IChatCompletionService chatCompletionService) : I
 
         if (typeof(T) != typeof(object))
         {
-#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             executionSettings.ResponseFormat = typeof(T);
-#pragma warning restore SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         }
 
         var contentEnumerable = context.Settings.Stream
