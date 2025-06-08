@@ -1,6 +1,9 @@
 using System.ClientModel;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using SK.Ext.Models;
+using SK.Ext.Models.History;
+using SK.Ext.Models.Result;
 
 namespace SK.Ext.Sample;
 
@@ -17,7 +20,17 @@ public class CompletionAgentSample
         var chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
 
         var agent = new CompletionAgent(chatCompletionService);
-        var context = new CompletionContextBuilder().Build();
+        var context = new CompletionContextBuilder().WithHistory(new CompletionHistory
+        {
+            Messages =
+            [
+                new CompletionText
+                {
+                    Identity = new UserIdentity(),
+                    Content = "What is the capital of France?"
+                }
+            ]
+        }).Build();
 
         await foreach (var content in agent.Completion(kernel, context, default))
         {
@@ -30,7 +43,7 @@ public class CompletionAgentSample
         Console.Write(content switch
         {
             TextResult textResult
-                => textResult.IsStreamed ? $"{textResult.Text}" : $"[Text Result] {textResult.Text}",
+                => textResult.IsStreamed ? $"{textResult.Text}" : $"[Text Result] {textResult.Text}\n",
 
             FinishReasonResult finishReasonResult
                 => $"[Finish Reason] {finishReasonResult.FinishReason}\n",

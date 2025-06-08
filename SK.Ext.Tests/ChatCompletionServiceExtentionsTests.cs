@@ -2,6 +2,7 @@
 using Microsoft.SemanticKernel.ChatCompletion;
 using SK.Ext;
 using FakeItEasy;
+using SK.Ext.Models.Result;
 
 namespace sk.ext.tests;
 

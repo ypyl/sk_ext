@@ -4,147 +4,16 @@ using System.Text.Json;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using SK.Ext.Models;
+using SK.Ext.Models.History;
+using SK.Ext.Models.Plugin;
+using SK.Ext.Models.Result;
 
 namespace SK.Ext;
 
-public interface ICompletionPlugin
+public class CompletionAgent(IChatCompletionService chatCompletionService)
 {
-    public Delegate FunctionDelegate { get; }
-    public string PluginName { get; }
-    public string Name { get; }
-    public string FunctionDescription { get; }
-    public IEnumerable<PluginParameter> Parameters { get; }
-    public PluginReturnMetadata Return { get; }
-    public bool IsRequired { get; }
-}
-
-public class PluginReturnMetadata
-{
-    public string Description { get; init; } = string.Empty;
-    public Type? Type { get; init; } = null;
-}
-
-public abstract class PluginParameter
-{
-    public required string Name { get; init; }
-}
-
-public class ModelParameter : PluginParameter
-{
-    public string Description { get; init; } = string.Empty;
-    public object? DefaultValue { get; init; } = null;
-    public Type? Type { get; init; } = null;
-    public bool IsRequired { get; init; } = false;
-}
-
-public class RuntimeParameter : PluginParameter
-{
-    public object? Value { get; init; } = null;
-}
-
-public record CompletionSettings
-{
-    public double Temperature { get; init; } = 0.7;
-    public int MaxTokens { get; init; } = 1000;
-    public double TopP { get; init; } = 1.0;
-    public bool Stream { get; init; } = false;
-    public bool Seed { get; init; } = false;
-}
-
-public class CompletionHistory
-{
-    public required List<ICompletionMessage> Messages { get; init; } = [];
-}
-
-public enum CompletionRole
-{
-    User,
-    Assistant,
-    System
-}
-
-public interface ICompletionMessage
-{
-    CompletionRole Role { get; }
-}
-
-public class CompletionImage : ICompletionMessage
-{
-    public CompletionRole Role { get; set; }
-    public ReadOnlyMemory<byte> Data { get; set; }
-    public string? MimeType { get; set; }
-}
-
-public class CompletionAudio : ICompletionMessage
-{
-    public CompletionRole Role { get; set; }
-    public ReadOnlyMemory<byte> Data { get; set; }
-    public string? MimeType { get; set; }
-}
-
-public class CompletionText : ICompletionMessage
-{
-    public CompletionRole Role { get; set; }
-    public string? Content { get; set; }
-}
-
-public class CompletionFunctionCall : ICompletionMessage
-{
-    public CompletionRole Role { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string PluginName { get; set; } = string.Empty;
-    public IDictionary<string, object?> Arguments { get; set; } = new Dictionary<string, object?>();
-    public object? Result { get; set; } = null;
-}
-
-public class CompletionCollection : ICompletionMessage
-{
-    public CompletionRole Role { get; set; }
-    public List<ICompletionMessage> Messages { get; } = [];
-}
-
-public record CompletionContext(CompletionHistory History, CompletionSettings Settings, IEnumerable<ICompletionPlugin> Plugins);
-
-public class CompletionContextBuilder
-{
-    private CompletionHistory _history = new()
-    {
-        Messages = [new CompletionText { Role = CompletionRole.System, Content = "You are a helpful assistant." }]
-    };
-    private CompletionSettings _settings = new();
-    private IEnumerable<ICompletionPlugin> _plugins = [];
-
-    public CompletionContextBuilder WithHistory(CompletionHistory history)
-    {
-        _history = history;
-        return this;
-    }
-
-    public CompletionContextBuilder WithSettings(CompletionSettings settings)
-    {
-        _settings = settings;
-        return this;
-    }
-    public CompletionContextBuilder WithPlugins(IEnumerable<ICompletionPlugin> plugins)
-    {
-        _plugins = plugins;
-        return this;
-    }
-
-    public CompletionContext Build()
-    {
-        return new CompletionContext(_history, _settings, _plugins);
-    }
-}
-
-public class CompletionAgent
-{
-    private readonly IChatCompletionService _chatCompletionService;
-
-    public CompletionAgent(IChatCompletionService chatCompletionService)
-    {
-        _chatCompletionService = chatCompletionService;
-    }
+    private readonly IChatCompletionService _chatCompletionService = chatCompletionService;
 
     public async IAsyncEnumerable<IContentResult> Completion(Kernel kernel, CompletionContext context,
         [EnumeratorCancellation] CancellationToken token)
@@ -211,8 +80,7 @@ public class CompletionAgent
 
             if (content is FunctionCall functionCall && requiredToCall.Any())
             {
-                requiredToCall = [.. requiredToCall.Where(x => x.PluginName == functionCall.PluginName
-                    && x.Name == functionCall.Name)];
+                requiredToCall = [.. requiredToCall.Where(x => x.PluginName != functionCall.PluginName || x.Name != functionCall.Name)];
                 executionSettings.FunctionChoiceBehavior = requiredToCall.Any()
                     ? FunctionChoiceBehavior.Required(requiredToCall, false)
                     : FunctionChoiceBehavior.Auto(autoInvoke: false);
@@ -298,7 +166,7 @@ public class CompletionAgent
             else
             {
                 chatHistory.AddMessage(
-                    MapCompletionRoleToAuthorRole(message.Role),
+                    MapCompletionRoleToAuthorRole(message.Identity),
                     MapCompletionMessageToKernelContent(message));
             }
         }
@@ -332,14 +200,14 @@ public class CompletionAgent
 #pragma warning restore SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     }
 
-    private static AuthorRole MapCompletionRoleToAuthorRole(CompletionRole role)
+    private static AuthorRole MapCompletionRoleToAuthorRole(ISenderIdentity identity)
     {
-        return role switch
+        return identity switch
         {
-            CompletionRole.User => AuthorRole.User,
-            CompletionRole.Assistant => AuthorRole.Assistant,
-            CompletionRole.System => AuthorRole.System,
-            _ => throw new ArgumentOutOfRangeException(nameof(role), role, null)
+            UserIdentity => AuthorRole.User,
+            AssistantIdentity  => AuthorRole.Assistant,
+            SystemIdentity => AuthorRole.System,
+            _ => throw new ArgumentOutOfRangeException(nameof(identity), identity, null)
         };
     }
 

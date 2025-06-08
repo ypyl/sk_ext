@@ -2,15 +2,16 @@
 
 class Program
 {
-    const string groqKey = "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";
+    const string groqKey = "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";
+    const string defaultSample = "agent";
 
     static async Task Main(string[] args)
     {
         if (args.Length == 0)
         {
             PrintUsage();
-            Console.WriteLine("No sample name provided. Running default sample:.");
-            await RunSample("agent");
+            Console.WriteLine($"No sample name provided. Running default sample: {defaultSample}.");
+            await RunSample(defaultSample);
             return;
         }
 
