@@ -1,8 +1,8 @@
 namespace SK.Ext.Models.History;
 
-public class AgentIdentity : ISenderIdentity
+public record AgentIdentity
 {
-    public string? Name { get; set; }
+    public required string Name { get; init; }
     public required CompletionRole Role { get; init; }
 
     public static AgentIdentity User { get; } = new AgentIdentity

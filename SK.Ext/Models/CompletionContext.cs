@@ -4,4 +4,4 @@ using SK.Ext.Models.Settings;
 
 namespace SK.Ext.Models;
 
-public record CompletionContext(CompletionHistory History, CompletionSettings Settings, IEnumerable<ICompletionPlugin> Plugins);
+public record CompletionContext(CompletionSystemMessage SystemMessage, CompletionHistory History, CompletionSettings Settings, IEnumerable<ICompletionPlugin> Plugins);

@@ -1,8 +1,7 @@
 namespace SK.Ext.Models.History;
 
-public class CompletionAudio : ICompletionMessage
+public record CompletionAudio : CompletionMessage
 {
-    public required ISenderIdentity Identity { get; set; }
     public ReadOnlyMemory<byte> Data { get; set; }
     public string? MimeType { get; set; }
 }

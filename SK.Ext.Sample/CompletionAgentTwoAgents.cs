@@ -5,15 +5,15 @@ using SK.Ext.Models.Result;
 
 namespace SK.Ext.Sample;
 
-public class CompletionAgentFullAnswerSample
+public class CompletionAgentTwoAgents
 {
     public static async Task Run(string groqKey)
     {
-         OpenAIChatCompletionService chatCompletionService = new (
-            modelId: "llama-3.3-70b-versatile",
-            apiKey: groqKey,
-            httpClient: new HttpClient { BaseAddress = new Uri("https://api.groq.com/openai/v1") }
-        );
+        OpenAIChatCompletionService chatCompletionService = new(
+           modelId: "llama-3.3-70b-versatile",
+           apiKey: groqKey,
+           httpClient: new HttpClient { BaseAddress = new Uri("https://api.groq.com/openai/v1") }
+       );
 
         var agent = new CompletionAgent(chatCompletionService);
         var history = new CompletionHistory
@@ -31,9 +31,8 @@ public class CompletionAgentFullAnswerSample
             .WithSystemMessage(new CompletionSystemMessage
             {
                 Prompt = "You are a helpful assistant that answers questions in detail. Once you have not provided a full answer, append the below:\n==== TO BE CONTINUED ====" +
-                         "You will continue the answer in the next message."
-            })
-            .WithHistory(history).Build();
+                        "You will continue the answer in the next message."
+            }).WithHistory(history).Build();
         bool isContinued;
         do
         {

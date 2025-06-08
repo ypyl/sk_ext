@@ -1,7 +1,6 @@
 namespace SK.Ext.Models.History;
 
-public class CompletionCollection : ICompletionMessage
+public record CompletionCollection : CompletionMessage
 {
-    public required ISenderIdentity Identity { get; set; }
-    public List<ICompletionMessage> Messages { get; } = [];
+    public List<CompletionMessage> Messages { get; } = [];
 }

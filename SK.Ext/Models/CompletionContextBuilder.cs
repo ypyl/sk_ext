@@ -6,12 +6,16 @@ namespace SK.Ext.Models;
 
 public class CompletionContextBuilder
 {
-    private CompletionHistory _history = new()
-    {
-        Messages = [new CompletionText { Identity = SystemIdentity.Instance, Content = "You are a helpful assistant." }]
-    };
+    private CompletionHistory _history = new() { Messages = [] };
     private CompletionSettings _settings = new();
     private IEnumerable<ICompletionPlugin> _plugins = [];
+    private CompletionSystemMessage _systemMessage = new() { Prompt = "You are a helpful assistant." };
+
+    public CompletionContextBuilder WithSystemMessage(CompletionSystemMessage systemMessage)
+    {
+        _systemMessage = systemMessage;
+        return this;
+    }
 
     public CompletionContextBuilder WithHistory(CompletionHistory history)
     {
@@ -32,6 +36,6 @@ public class CompletionContextBuilder
 
     public CompletionContext Build()
     {
-        return new CompletionContext(_history, _settings, _plugins);
+        return new CompletionContext(_systemMessage, _history, _settings, _plugins);
     }
 }

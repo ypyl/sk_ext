@@ -2,18 +2,45 @@ namespace SK.Ext.Models.History;
 
 public class CompletionHistory
 {
-    private List<ICompletionMessage> _messages = [];
-    public required List<ICompletionMessage> Messages
+    public required List<CompletionMessage> Messages { get;  init; } = [];
+
+    public CompletionHistory ForAgent(string agentName)
     {
-        get => _messages;
-        init
+        if (string.IsNullOrWhiteSpace(agentName))
+            throw new ArgumentException("Name cannot be null or whitespace.", nameof(agentName));
+
+        return new CompletionHistory
         {
-            if (value == null || value.Count == 0)
-                throw new InvalidOperationException("Messages cannot be null or empty.");
-            var systemCount = value.Count(m => m.Identity is SystemIdentity);
-            if (systemCount != 1)
-                throw new InvalidOperationException($"Messages must contain exactly one message with ISenderIdentity = SystemIdentity, but found {systemCount}.");
-            _messages = value;
+            Messages = [.. Messages.Select(m =>
+            {
+                if (m.Identity is AgentIdentity agentIdentity)
+                {
+                    return m with { Identity = UpdateRole(agentIdentity) };
+                }
+                return m;
+            })]
+        };
+
+        AgentIdentity UpdateRole(AgentIdentity agentIdentity)
+        {
+            if (agentIdentity.Role == CompletionRole.User)
+            {
+                return agentIdentity with
+                {
+                    Role = agentIdentity.Name == agentName ? CompletionRole.User : CompletionRole.Assistant
+                };
+            }
+            else if (agentIdentity.Role == CompletionRole.Assistant)
+            {
+                return agentIdentity with
+                {
+                    Role = agentIdentity.Name == agentName ? CompletionRole.Assistant : CompletionRole.User
+                };
+            }
+            else
+            {
+                throw new InvalidOperationException($"Unknown role: {agentIdentity.Role}");
+            }
         }
     }
 }

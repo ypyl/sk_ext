@@ -40,7 +40,7 @@ public class CompletionAgent(IChatCompletionService chatCompletionService) : ICo
     {
         var k = _kernel.Clone();
         var structuredOutput = typeof(T) != typeof(object);
-        var chatHistory = MapCompletionHistoryToChatHistory(context.History);
+        var chatHistory = MapCompletionHistoryToChatHistory(context.SystemMessage, context.History);
 
         var kernelFunctions = ImportPlugins(k, context.Plugins);
         var requiredToCallPlugins = context.Plugins.Where(x => x.IsRequired).ToList();
@@ -150,9 +150,9 @@ public class CompletionAgent(IChatCompletionService chatCompletionService) : ICo
         return function;
     }
 
-    private static ChatHistory MapCompletionHistoryToChatHistory(CompletionHistory history)
+    private static ChatHistory MapCompletionHistoryToChatHistory(CompletionSystemMessage systemMessage, CompletionHistory history)
     {
-        var chatHistory = new ChatHistory();
+        var chatHistory = new ChatHistory(systemMessage.Prompt);
         foreach (var message in history.Messages)
         {
             if (message is CompletionFunctionCall functionCall)
@@ -186,7 +186,7 @@ public class CompletionAgent(IChatCompletionService chatCompletionService) : ICo
         }
     }
 
-    private static ChatMessageContentItemCollection MapCompletionMessageToKernelContent(ICompletionMessage message)
+    private static ChatMessageContentItemCollection MapCompletionMessageToKernelContent(CompletionMessage message)
     {
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         return message switch
@@ -201,19 +201,13 @@ public class CompletionAgent(IChatCompletionService chatCompletionService) : ICo
 #pragma warning restore SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     }
 
-    private static AuthorRole MapCompletionRoleToAuthorRole(ISenderIdentity identity)
+    private static AuthorRole MapCompletionRoleToAuthorRole(AgentIdentity identity)
     {
-        return identity switch
+        return identity.Role switch
         {
-            AgentIdentity agentIdentity =>
-                agentIdentity.Role switch
-                {
-                    CompletionRole.User => AuthorRole.User,
-                    CompletionRole.Assistant => AuthorRole.Assistant,
-                    _ => throw new ArgumentOutOfRangeException(nameof(identity), agentIdentity.Role, null)
-                },
-            SystemIdentity => AuthorRole.System,
-            _ => throw new ArgumentOutOfRangeException(nameof(identity), identity, null)
+            CompletionRole.User => AuthorRole.User,
+            CompletionRole.Assistant => AuthorRole.Assistant,
+            _ => throw new ArgumentOutOfRangeException(nameof(identity.Role), identity.Role, null)
         };
     }
 
