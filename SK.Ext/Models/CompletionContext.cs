@@ -4,4 +4,14 @@ using SK.Ext.Models.Settings;
 
 namespace SK.Ext.Models;
 
-public record CompletionContext(CompletionSystemMessage SystemMessage, CompletionHistory History, CompletionSettings Settings, IEnumerable<ICompletionPlugin> Plugins);
+public record CompletionContext(CompletionSystemMessage SystemMessage, CompletionHistory History, CompletionSettings Settings, IEnumerable<ICompletionPlugin> Plugins)
+{
+    public CompletionContext ForAgent(AgentIdentity identity, string? systemPrompt = null)
+    {
+        if (string.IsNullOrEmpty(systemPrompt))
+        {
+            return this with { History = History.ForAgent(identity) };
+        }
+        return this with { History = History.ForAgent(identity), SystemMessage = new CompletionSystemMessage { Prompt = systemPrompt } };
+    }
+}

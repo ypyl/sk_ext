@@ -68,6 +68,15 @@ public class CompletionAgentFullAnswerSample
                 return true;
             }
         }
+        if (content is CallingLLMExceptionResult callingLLMExceptionResult)
+        {
+            Console.Write($"[Calling LLM Exception] {callingLLMExceptionResult.Exception}\n");
+            return false;
+        }
+        if (content is FinishReasonResult finishReasonResult)
+        {
+            Console.Write($"[Finish Reason] {finishReasonResult.FinishReason}\n");
+        }
         return false;
     }
 }

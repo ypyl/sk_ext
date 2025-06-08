@@ -16,17 +16,18 @@ public class CompletionAgentSample
         );
 
         var agent = new CompletionAgent(chatCompletionService);
-        var context = new CompletionContextBuilder().WithHistory(new CompletionHistory
-        {
-            Messages =
-            [
-                new CompletionText
-                {
-                    Identity = AgentIdentity.User,
-                    Content = "What is the capital of France?"
-                }
-            ]
-        }).Build();
+        var context = new CompletionContextBuilder()
+            .WithHistory(new CompletionHistory
+            {
+                Messages =
+                [
+                    new CompletionText
+                    {
+                        Identity = AgentIdentity.User,
+                        Content = "What is the capital of France?"
+                    }
+                ]
+            }).Build();
 
         await foreach (var content in agent.Completion(context, default))
         {

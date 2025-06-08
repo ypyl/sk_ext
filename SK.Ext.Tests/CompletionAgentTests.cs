@@ -20,7 +20,7 @@ namespace SK.Ext.Tests
                 {
                     Messages =
                     [
-                        new CompletionText { Identity = new UserIdentity(), Content = "Hello, assistant!" }
+                        new CompletionText { Identity = AgentIdentity.User, Content = "Hello, assistant!" }
                     ]
                 })
                 .Build();
@@ -39,7 +39,7 @@ namespace SK.Ext.Tests
 
             // Act
             var results = new List<IContentResult>();
-            await foreach (var result in agent.Completion(kernel, context, CancellationToken.None))
+            await foreach (var result in agent.Completion(context, CancellationToken.None))
             {
                 results.Add(result);
             }

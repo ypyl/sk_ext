@@ -2,44 +2,61 @@ namespace SK.Ext.Models.History;
 
 public class CompletionHistory
 {
-    public required List<CompletionMessage> Messages { get;  init; } = [];
+    public List<CompletionMessage> Messages { get; init; } = [];
 
-    public CompletionHistory ForAgent(string agentName)
+    public CompletionHistory()
     {
-        if (string.IsNullOrWhiteSpace(agentName))
-            throw new ArgumentException("Name cannot be null or whitespace.", nameof(agentName));
+    }
+
+    public CompletionHistory(string userMessage)
+    {
+        ArgumentNullException.ThrowIfNull(userMessage);
+
+        Messages.Add(new CompletionText
+        {
+            Identity = AgentIdentity.User,
+            Content = "Explain the SOLID principles in software development with examples."
+        });
+    }
+
+    // <summary>
+    // Creates a copy of the completion history for a specific agent identity.
+    // The messages in the history will be updated to reflect the role of the specified agent.
+    // If the agent identity's role is User, the messages will be updated to have the User role for that agent. Other messages will be updated to have the Assistant role.
+    // If the agent identity's role is Assistant, the messages will be updated to have the Assistant role for that agent. Other messages will be updated to have the User role.
+    // If the agent identity's role is neither User nor Assistant, an exception will be thrown.
+    // </summary>
+    public CompletionHistory ForAgent(AgentIdentity agentIdentity)
+    {
+        ArgumentNullException.ThrowIfNull(agentIdentity);
 
         return new CompletionHistory
         {
             Messages = [.. Messages.Select(m =>
             {
-                if (m.Identity is AgentIdentity agentIdentity)
-                {
-                    return m with { Identity = UpdateRole(agentIdentity) };
-                }
-                return m;
+                return m with { Identity = UpdateRole(m.Identity) };
             })]
         };
 
-        AgentIdentity UpdateRole(AgentIdentity agentIdentity)
+        AgentIdentity UpdateRole(AgentIdentity identity)
         {
             if (agentIdentity.Role == CompletionRole.User)
             {
-                return agentIdentity with
+                return identity with
                 {
-                    Role = agentIdentity.Name == agentName ? CompletionRole.User : CompletionRole.Assistant
+                    Role = identity.Name == agentIdentity.Name ? CompletionRole.User : CompletionRole.Assistant
                 };
             }
             else if (agentIdentity.Role == CompletionRole.Assistant)
             {
-                return agentIdentity with
+                return identity with
                 {
-                    Role = agentIdentity.Name == agentName ? CompletionRole.Assistant : CompletionRole.User
+                    Role = identity.Name == agentIdentity.Name ? CompletionRole.Assistant : CompletionRole.User
                 };
             }
             else
             {
-                throw new InvalidOperationException($"Unknown role: {agentIdentity.Role}");
+                throw new InvalidOperationException($"Unknown role: {identity.Role}");
             }
         }
     }

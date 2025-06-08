@@ -28,6 +28,9 @@ class Program
             case "agent-full-answer":
                 await CompletionAgentFullAnswerSample.Run(GroqConfig.Key);
                 break;
+            case "agent-collaboration":
+                await CompletionAgentTwoAgents.Run(GroqConfig.Key);
+                break;
             case "duplication":
                 await RemoveDuplicatedFunctionCallResultsSample.Run(GroqConfig.Key);
                 break;

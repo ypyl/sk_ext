@@ -2,5 +2,5 @@ namespace SK.Ext.Models.History;
 
 public record CompletionText : CompletionMessage
 {
-    public string? Content { get; set; }
+    public required string Content { get; init; }
 }
