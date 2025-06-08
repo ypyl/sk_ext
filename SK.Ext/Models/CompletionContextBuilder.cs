@@ -11,15 +11,18 @@ public class CompletionContextBuilder
     private IEnumerable<ICompletionPlugin> _plugins = [];
     private CompletionSystemMessage _systemMessage = new() { Prompt = "You are a helpful assistant." };
 
-    public CompletionContextBuilder WithSystemMessage(CompletionSystemMessage systemMessage)
+    public CompletionContextBuilder WithSystemMessage(string systemPrompt)
     {
-        _systemMessage = systemMessage;
+        _systemMessage = new CompletionSystemMessage
+        {
+            Prompt = systemPrompt
+        };
         return this;
     }
 
-    public CompletionContextBuilder WithHistory(CompletionHistory history)
+    public CompletionContextBuilder WithInitialUserMessage(string userMessage)
     {
-        _history = history;
+        _history = new CompletionHistory(userMessage);
         return this;
     }
 

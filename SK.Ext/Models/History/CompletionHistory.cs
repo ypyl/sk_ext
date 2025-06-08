@@ -2,7 +2,7 @@ namespace SK.Ext.Models.History;
 
 public class CompletionHistory
 {
-    public List<CompletionMessage> Messages { get; init; } = [];
+    public IEnumerable<CompletionMessage> Messages { get; init; } = [];
 
     public CompletionHistory()
     {
@@ -12,11 +12,11 @@ public class CompletionHistory
     {
         ArgumentNullException.ThrowIfNull(userMessage);
 
-        Messages.Add(new CompletionText
+        Messages = [new CompletionText
         {
             Identity = AgentIdentity.User,
-            Content = "Explain the SOLID principles in software development with examples."
-        });
+            Content = userMessage
+        }];
     }
 
     // <summary>
@@ -59,5 +59,13 @@ public class CompletionHistory
                 throw new InvalidOperationException($"Unknown role: {identity.Role}");
             }
         }
+    }
+
+    public CompletionHistory AddMessages(IEnumerable<CompletionMessage> messages)
+    {
+        return new CompletionHistory
+        {
+            Messages = [.. Messages, .. messages]
+        };
     }
 }

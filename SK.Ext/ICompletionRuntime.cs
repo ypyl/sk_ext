@@ -3,7 +3,7 @@ using SK.Ext.Models.Result;
 
 namespace SK.Ext;
 
-public interface ICompletionAgent
+public interface ICompletionRuntime
 {
     IAsyncEnumerable<IContentResult> Completion(CompletionContext context, CancellationToken token);
     IAsyncEnumerable<IContentResult> Completion<T>(CompletionContext context, CancellationToken token);

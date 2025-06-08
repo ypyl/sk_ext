@@ -1,35 +1,41 @@
+using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using OllamaSharp;
 using SK.Ext.Models;
 using SK.Ext.Models.History;
 using SK.Ext.Models.Result;
 
 namespace SK.Ext.Sample;
 
-public class CompletionAgentSample
+public class AgentSample
 {
     public static async Task Run(string groqKey)
     {
-        OpenAIChatCompletionService chatCompletionService = new (
-            modelId: "llama-3.3-70b-versatile",
-            apiKey: groqKey,
-            httpClient: new HttpClient { BaseAddress = new Uri("https://api.groq.com/openai/v1") }
+        using var ollamaClient = new OllamaApiClient(
+            uriString: "http://localhost:11434",    // E.g. "http://localhost:11434" if Ollama has been started in docker as described above.
+            defaultModel: "gemma3:1b" // E.g. "phi3" if phi3 was downloaded as described above.
         );
+        // OpenAIChatCompletionService chatCompletionService = new(
+        //    modelId: "llama-3.3-70b-versatile",
+        //    apiKey: groqKey,
+        //    httpClient: new HttpClient { BaseAddress = new Uri("https://api.groq.com/openai/v1") }
+        // );
 
-        var agent = new CompletionAgent(chatCompletionService);
-        var context = new CompletionContextBuilder()
-            .WithHistory(new CompletionHistory
-            {
-                Messages =
-                [
-                    new CompletionText
-                    {
-                        Identity = AgentIdentity.User,
-                        Content = "What is the capital of France?"
-                    }
-                ]
-            }).Build();
+#pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        IChatCompletionService chatCompletionService = ollamaClient.AsChatCompletionService();
+#pragma warning restore SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
-        await foreach (var content in agent.Completion(context, default))
+        var runtime = new CompletionRuntime(chatCompletionService);
+        // OpenAIChatCompletionService chatCompletionService = new(
+        //     modelId: "llama-3.3-70b-versatile",
+        //     apiKey: groqKey,
+        //     httpClient: new HttpClient { BaseAddress = new Uri("https://api.groq.com/openai/v1") }
+        // );
+
+        // var runtime = new CompletionRuntime(chatCompletionService);
+        var context = new CompletionContextBuilder().WithInitialUserMessage("What is the capital of France?").Build();
+
+        await foreach (var content in runtime.Completion(context, default))
         {
             ProcessContentResults(content);
         }

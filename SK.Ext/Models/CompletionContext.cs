@@ -14,4 +14,10 @@ public record CompletionContext(CompletionSystemMessage SystemMessage, Completio
         }
         return this with { History = History.ForAgent(identity), SystemMessage = new CompletionSystemMessage { Prompt = systemPrompt } };
     }
+
+    public CompletionContext AddMessages(IEnumerable<CompletionMessage> messages)
+    {
+        var updatedHistory = History.AddMessages(messages);
+        return this with { History = updatedHistory };
+    }
 }

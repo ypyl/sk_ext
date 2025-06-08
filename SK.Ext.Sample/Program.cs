@@ -2,7 +2,7 @@
 
 class Program
 {
-    const string defaultSample = "agent-full-answer";
+    const string defaultSample = "agent-collaboration";
 
     static async Task Main(string[] args)
     {
@@ -23,13 +23,13 @@ class Program
         switch (sampleName)
         {
             case "agent":
-                await CompletionAgentSample.Run(GroqConfig.Key);
+                await AgentSample.Run(GroqConfig.Key);
                 break;
             case "agent-full-answer":
-                await CompletionAgentFullAnswerSample.Run(GroqConfig.Key);
+                await AgentFullAnswerSample.Run(GroqConfig.Key);
                 break;
             case "agent-collaboration":
-                await CompletionAgentTwoAgents.Run(GroqConfig.Key);
+                await AgentCollaboration.Run(GroqConfig.Key);
                 break;
             case "duplication":
                 await RemoveDuplicatedFunctionCallResultsSample.Run(GroqConfig.Key);

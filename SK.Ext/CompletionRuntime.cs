@@ -12,7 +12,7 @@ using SK.Ext.Models.Result;
 namespace SK.Ext;
 
 // TODO allow to pass default set of plugins to the constructor
-public class CompletionAgent(IChatCompletionService chatCompletionService) : ICompletionAgent
+public class CompletionRuntime(IChatCompletionService chatCompletionService) : ICompletionRuntime
 {
     private readonly IChatCompletionService _chatCompletionService = chatCompletionService;
     private readonly Kernel _kernel = Kernel.CreateBuilder().Build();

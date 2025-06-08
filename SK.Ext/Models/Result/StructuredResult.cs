@@ -2,7 +2,7 @@ namespace SK.Ext.Models.Result;
 
 /// <summary>
 /// Return structured output result
-/// Only when using <see cref="CompletionAgent"/>
+/// Only when using <see cref="CompletionRuntime"/>
 /// </summary>
 /// <typeparam name="T"></typeparam>
 public record StructuredResult<T> : IContentResult

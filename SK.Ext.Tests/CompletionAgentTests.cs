@@ -16,13 +16,7 @@ namespace SK.Ext.Tests
             var fakeService = A.Fake<IChatCompletionService>();
             var kernel = new Kernel();
             var context = new CompletionContextBuilder()
-                .WithHistory(new CompletionHistory
-                {
-                    Messages =
-                    [
-                        new CompletionText { Identity = AgentIdentity.User, Content = "Hello, assistant!" }
-                    ]
-                })
+                .WithInitialUserMessage("Hello, assistant!")
                 .Build();
 
             var expectedText = "Hello, user!";
@@ -35,7 +29,7 @@ namespace SK.Ext.Tests
                     A<CancellationToken>._))
                 .Returns(Task.FromResult<IReadOnlyList<ChatMessageContent>>(new List<ChatMessageContent> { chatMessageContent }));
 
-            var agent = new CompletionAgent(fakeService);
+            var agent = new CompletionRuntime(fakeService);
 
             // Act
             var results = new List<IContentResult>();
