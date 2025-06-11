@@ -47,16 +47,14 @@ public class AgentCollaboration
         var finalizerIdentity = new AgentIdentity { Name = "finalizer", Role = CompletionRole.Assistant };
         var context = new CompletionContextBuilder().WithInitialUserMessage("Explain the SOLID principles in software development with examples.").Build();
 
-        context = context.ForAgent(writerIdentity, writerSystemMessage);
-        context = await RunAgent(runtime, writerIdentity, context, cancellationToken);
+        context = await RunAgent(runtime, writerIdentity, context, writerSystemMessage, cancellationToken);
 
         var iteration = 0;
         const int maxIterations = 5;
 
         while (iteration < maxIterations)
         {
-            context = context.ForAgent(reviewerIdentity, reviewerSystemMessage);
-            context = await RunAgent(runtime, reviewerIdentity, context, cancellationToken);
+            context = await RunAgent(runtime, reviewerIdentity, context, reviewerSystemMessage, cancellationToken);
 
             if (context.History.Messages.OfType<CompletionText>().Last(x => x.Identity == reviewerIdentity).Content.StartsWith("APPROVED:", StringComparison.OrdinalIgnoreCase))
             {
@@ -64,18 +62,18 @@ public class AgentCollaboration
                 break;
             }
 
-            context = context.ForAgent(writerIdentity, writerSystemMessage);
-            context = await RunAgent(runtime, writerIdentity, context, cancellationToken);
+            context = await RunAgent(runtime, writerIdentity, context, writerSystemMessage, cancellationToken);
 
             iteration++;
         }
 
-        context = context.ForAgent(finalizerIdentity, finalizerSystemMessage);
-        await RunAgent(runtime, finalizerIdentity, context, cancellationToken);
+        context = await RunAgent(runtime, finalizerIdentity, context, finalizerSystemMessage, cancellationToken);
     }
 
-    private static async Task<CompletionContext> RunAgent(CompletionRuntime runtime, AgentIdentity agentIdentity, CompletionContext context, CancellationToken cancellationToken)
+    private static async Task<CompletionContext> RunAgent(CompletionRuntime runtime, AgentIdentity agentIdentity, CompletionContext context, string systemMessage, CancellationToken cancellationToken)
     {
+        // Ensure the context is set for the agent with the system message
+        context = context.ForAgent(agentIdentity, systemMessage);
         var result = new StringBuilder();
         await foreach (var content in runtime.Completion(context, cancellationToken))
         {

@@ -1,0 +1,54 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "dotnet",
+			"task": "build",
+			"group": "build",
+			"problemMatcher": [],
+			"label": "dotnet: build"
+		},
+		{
+			"label": "clean-coverage-folders",
+			"type": "shell",
+			"command": "Remove-Item -Recurse -Force .\\coveragereport, .\\SK.Ext.Tests\\TestResults -ErrorAction SilentlyContinue; exit 0",
+			"problemMatcher": [],
+			"windows": {
+				"command": "Remove-Item -Recurse -Force .\\coveragereport, .\\SK.Ext.Tests\\TestResults -ErrorAction SilentlyContinue; exit 0"
+			}
+		},
+		{
+			"label": "dotnet-test-coverage",
+			"type": "process",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"SK.Ext.Tests/SK.Ext.Tests.csproj",
+				"--collect:XPlat Code Coverage"
+			]
+		},
+		{
+			"label": "generate-coverage-report",
+			"type": "shell",
+			"command": "reportgenerator -reports:\"${workspaceFolder}/SK.Ext.Tests/TestResults/*/coverage.cobertura.xml\" -targetdir:coveragereport -reporttypes:Html",
+			"problemMatcher": []
+		},
+		{
+			"label": "open-coverage-report",
+			"type": "shell",
+			"command": "start ${workspaceFolder}/coveragereport/index.html",
+			"problemMatcher": []
+		},
+		{
+			"label": "full-coverage-workflow",
+			"dependsOn": [
+				"clean-coverage-folders",
+				"dotnet-test-coverage",
+				"generate-coverage-report",
+				"open-coverage-report"
+			],
+			"dependsOrder": "sequence",
+			"problemMatcher": []
+		}
+	]
+}

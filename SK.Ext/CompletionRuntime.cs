@@ -205,7 +205,7 @@ public class CompletionRuntime(IChatCompletionService chatCompletionService) : I
         {
             CompletionRole.User => AuthorRole.User,
             CompletionRole.Assistant => AuthorRole.Assistant,
-            _ => throw new ArgumentOutOfRangeException(nameof(identity.Role), identity.Role, null)
+            _ => throw new NotSupportedException($"Unsupported role: {identity.Role}")
         };
     }
 

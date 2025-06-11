@@ -2,3 +2,5 @@ bin
 obj
 command.md
 SK.Ext.Sample/GroqConfig.cs
+coveragereport
+SK.Ext.Tests/TestResults

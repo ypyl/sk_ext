@@ -91,7 +91,7 @@ chatHistory.RemoveDuplicatedFunctionCallResults();
 
 ```
 dotnet test --collect:"XPlat Code Coverage"
-reportgenerator -reports:"C:\Users\ypyl\projects\sk_ext\SK.Ext.Tests\TestResults\<<guid>>\coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:Html
+reportgenerator -reports:"C:\Users\ypyl\projects\sk_ext\SK.Ext.Tests\TestResults\*\coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:Html
 ```
 
 ## License
