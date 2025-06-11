@@ -172,5 +172,57 @@ namespace SK.Ext.Tests
             Assert.Contains(results, r => r is IterationResult);
             Assert.Equal(2, results.Count);
         }
+
+        [Fact]
+        public async Task CompletionAgent_CallsPlugin_WhenPluginCallIsRequired()
+        {
+            // Arrange
+            var fakeService = A.Fake<IChatCompletionService>();
+            var plugin = new TestEchoPlugin(true); // IsRequired = true
+            var plugins = new List<ICompletionPlugin> { plugin };
+            var context = new CompletionContextBuilder()
+                .WithInitialUserMessage("Please call the echo plugin.")
+                .WithPlugins(plugins)
+                .Build();
+
+            // Simulate a function call result from the LLM as a single ChatMessageContent with a FunctionCallContent item
+            var functionCallContent = new FunctionCallContent(
+                functionName: plugin.Name,
+                pluginName: plugin.PluginName,
+                id: "1",
+                arguments: new KernelArguments { { "input", "test input" } }
+            );
+            var chatMessageContent = new ChatMessageContent(AuthorRole.Assistant, new ChatMessageContentItemCollection { functionCallContent });
+
+            // Simulate a normal message after the function call
+            var expectedText = "Echo complete!";
+            var chatMessageContent2 = new ChatMessageContent(AuthorRole.Assistant, expectedText);
+
+            // Fake the LLM service to return the function call, then the normal message
+            A.CallTo(() => fakeService.GetChatMessageContentsAsync(
+                A<ChatHistory>._,
+                A<PromptExecutionSettings>._,
+                A<Kernel>._,
+                A<CancellationToken>._))
+                .ReturnsNextFromSequence(Task.FromResult<IReadOnlyList<ChatMessageContent>>(
+                    new List<ChatMessageContent> { chatMessageContent }
+                ), Task.FromResult<IReadOnlyList<ChatMessageContent>>(
+                    new List<ChatMessageContent> { chatMessageContent2 }
+                ));
+
+            var runtime = new CompletionRuntime(fakeService);
+
+            // Act
+            var results = new List<IContentResult>();
+            await foreach (var result in runtime.Completion(context, CancellationToken.None))
+            {
+                results.Add(result);
+            }
+
+            // Assert
+            Assert.Contains(results, r => r is FunctionCall f && f.Name == plugin.Name && f.PluginName == plugin.PluginName);
+            Assert.Contains(results, r => r is FunctionExecutionResult f && f.Name == plugin.Name && f.PluginName == plugin.PluginName);
+            Assert.Contains(results, r => r is TextResult text && text.Text == expectedText);
+        }
     }
 }

@@ -3,7 +3,6 @@ using System.Text;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using OpenAI.Chat;
-using SK.Ext.Models;
 using SK.Ext.Models.Result;
 
 namespace SK.Ext;
