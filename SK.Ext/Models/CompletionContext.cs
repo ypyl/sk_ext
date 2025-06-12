@@ -6,7 +6,7 @@ namespace SK.Ext.Models;
 
 public record CompletionContext(CompletionSystemMessage SystemMessage, CompletionHistory History, CompletionSettings Settings, IEnumerable<ICompletionPlugin> Plugins)
 {
-    public CompletionContext ForAgent(AgentIdentity identity, string? systemPrompt = null)
+    public CompletionContext SwitchIdentity(AgentIdentity identity, string? systemPrompt = null)
     {
         if (string.IsNullOrEmpty(systemPrompt))
         {

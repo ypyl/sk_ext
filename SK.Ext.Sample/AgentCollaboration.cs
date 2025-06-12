@@ -73,7 +73,7 @@ public class AgentCollaboration
     private static async Task<CompletionContext> RunAgent(CompletionRuntime runtime, AgentIdentity agentIdentity, CompletionContext context, string systemMessage, CancellationToken cancellationToken)
     {
         // Ensure the context is set for the agent with the system message
-        context = context.ForAgent(agentIdentity, systemMessage);
+        context = context.SwitchIdentity(agentIdentity, systemMessage);
         var result = new StringBuilder();
         await foreach (var content in runtime.Completion(context, cancellationToken))
         {
