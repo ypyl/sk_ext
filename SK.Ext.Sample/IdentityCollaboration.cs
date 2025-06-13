@@ -70,10 +70,10 @@ public class IdentityCollaboration
         context = await Run(runtime, finalizerIdentity, context, finalizerSystemMessage, cancellationToken);
     }
 
-    private static async Task<CompletionContext> Run(CompletionRuntime runtime, ParticipantIdentity agentIdentity, CompletionContext context, string systemMessage, CancellationToken cancellationToken)
+    private static async Task<CompletionContext> Run(CompletionRuntime runtime, ParticipantIdentity participantIdentity, CompletionContext context, string systemMessage, CancellationToken cancellationToken)
     {
-        // Ensure the context is set for the agent with the system message
-        context = context.SwitchIdentity(agentIdentity, systemMessage);
+        // Ensure the context is set for the identity with the system message
+        context = context.SwitchIdentity(participantIdentity, systemMessage);
         var result = new StringBuilder();
         await foreach (var content in runtime.Completion(context, cancellationToken))
         {
@@ -86,12 +86,12 @@ public class IdentityCollaboration
                 result.Append(streamedTextContent.Text);
             }
         }
-        var agentAnswer = result.ToString();
-        Console.WriteLine($"[{agentIdentity.Name}]: {agentAnswer}");
+        var participantReply = result.ToString();
+        Console.WriteLine($"[{participantIdentity.Name}]: {participantReply}");
         return context.AddMessages([new CompletionText
         {
-            Identity = agentIdentity,
-            Content = agentAnswer
+            Identity = participantIdentity,
+            Content = participantReply
         }]);
     }
 }
