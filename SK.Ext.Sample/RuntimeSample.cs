@@ -1,13 +1,11 @@
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OllamaSharp;
 using SK.Ext.Models;
-using SK.Ext.Models.History;
 using SK.Ext.Models.Result;
 
 namespace SK.Ext.Sample;
 
-public class AgentSample
+public class RuntimeSample
 {
     public static async Task Run(string groqKey)
     {

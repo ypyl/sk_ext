@@ -8,7 +8,7 @@ using SK.Ext.Models.Result;
 
 namespace SK.Ext.Sample;
 
-public class AgentCollaboration
+public class IdentityCollaboration
 {
     public static async Task Run(string groqKey, CancellationToken cancellationToken = default)
     {
@@ -37,24 +37,24 @@ public class AgentCollaboration
 
         var writerSystemMessage = @"You are a Writer AI. Your role is to write clear, comprehensive responses to user requests.
             Focus on accuracy, clarity, and addressing all aspects of the request. Consider previous conversation context when responding.";
-        var writerIdentity = new AgentIdentity { Name = "writer", Role = CompletionRole.Assistant };
+        var writerIdentity = new ParticipantIdentity { Name = "writer", Role = CompletionRole.Assistant };
         var reviewerSystemMessage = @"You are a Reviewer AI. Your role is to review the writer's content and provide feedback.
             If the content is satisfactory, respond with 'APPROVED: ' followed by a brief explanation.
             If changes are needed, provide short one sentence specific suggestion for improvement.";
-        var reviewerIdentity = new AgentIdentity { Name = "rewiewer", Role = CompletionRole.Assistant };
+        var reviewerIdentity = new ParticipantIdentity { Name = "rewiewer", Role = CompletionRole.Assistant };
         var finalizerSystemMessage = @"You are a Finalizator AI. Your role is to create a final, polished version based on the entire conversation history.
             Incorporate the best elements from the discussion and ensure the final response is comprehensive and well-structured.";
-        var finalizerIdentity = new AgentIdentity { Name = "finalizer", Role = CompletionRole.Assistant };
+        var finalizerIdentity = new ParticipantIdentity { Name = "finalizer", Role = CompletionRole.Assistant };
         var context = new CompletionContextBuilder().WithInitialUserMessage("Explain the SOLID principles in software development with examples.").Build();
 
-        context = await RunAgent(runtime, writerIdentity, context, writerSystemMessage, cancellationToken);
+        context = await Run(runtime, writerIdentity, context, writerSystemMessage, cancellationToken);
 
         var iteration = 0;
         const int maxIterations = 5;
 
         while (iteration < maxIterations)
         {
-            context = await RunAgent(runtime, reviewerIdentity, context, reviewerSystemMessage, cancellationToken);
+            context = await Run(runtime, reviewerIdentity, context, reviewerSystemMessage, cancellationToken);
 
             if (context.History.Messages.OfType<CompletionText>().Last(x => x.Identity == reviewerIdentity).Content.StartsWith("APPROVED:", StringComparison.OrdinalIgnoreCase))
             {
@@ -62,15 +62,15 @@ public class AgentCollaboration
                 break;
             }
 
-            context = await RunAgent(runtime, writerIdentity, context, writerSystemMessage, cancellationToken);
+            context = await Run(runtime, writerIdentity, context, writerSystemMessage, cancellationToken);
 
             iteration++;
         }
 
-        context = await RunAgent(runtime, finalizerIdentity, context, finalizerSystemMessage, cancellationToken);
+        context = await Run(runtime, finalizerIdentity, context, finalizerSystemMessage, cancellationToken);
     }
 
-    private static async Task<CompletionContext> RunAgent(CompletionRuntime runtime, AgentIdentity agentIdentity, CompletionContext context, string systemMessage, CancellationToken cancellationToken)
+    private static async Task<CompletionContext> Run(CompletionRuntime runtime, ParticipantIdentity agentIdentity, CompletionContext context, string systemMessage, CancellationToken cancellationToken)
     {
         // Ensure the context is set for the agent with the system message
         context = context.SwitchIdentity(agentIdentity, systemMessage);

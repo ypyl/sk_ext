@@ -6,13 +6,13 @@ namespace SK.Ext.Models;
 
 public record CompletionContext(CompletionSystemMessage SystemMessage, CompletionHistory History, CompletionSettings Settings, IEnumerable<ICompletionPlugin> Plugins)
 {
-    public CompletionContext SwitchIdentity(AgentIdentity identity, string? systemPrompt = null)
+    public CompletionContext SwitchIdentity(ParticipantIdentity identity, string? systemPrompt = null)
     {
         if (string.IsNullOrEmpty(systemPrompt))
         {
-            return this with { History = History.ForAgent(identity) };
+            return this with { History = History.ForIdentity(identity) };
         }
-        return this with { History = History.ForAgent(identity), SystemMessage = new CompletionSystemMessage { Prompt = systemPrompt } };
+        return this with { History = History.ForIdentity(identity), SystemMessage = new CompletionSystemMessage { Prompt = systemPrompt } };
     }
 
     public CompletionContext AddMessages(IEnumerable<CompletionMessage> messages)

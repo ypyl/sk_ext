@@ -2,7 +2,7 @@
 
 class Program
 {
-    const string defaultSample = "agent-collaboration";
+    const string defaultSample = "identity-collaboration";
 
     static async Task Main(string[] args)
     {
@@ -22,14 +22,14 @@ class Program
     {
         switch (sampleName)
         {
-            case "agent":
-                await AgentSample.Run(GroqConfig.Key);
+            case "runtime":
+                await RuntimeSample.Run(GroqConfig.Key);
                 break;
-            case "agent-full-answer":
-                await AgentFullAnswerSample.Run(GroqConfig.Key);
+            case "full-answer":
+                await FullAnswerSample.Run(GroqConfig.Key);
                 break;
-            case "agent-collaboration":
-                await AgentCollaboration.Run(GroqConfig.Key);
+            case "identity-collaboration":
+                await IdentityCollaboration.Run(GroqConfig.Key);
                 break;
             case "duplication":
                 await RemoveDuplicatedFunctionCallResultsSample.Run(GroqConfig.Key);

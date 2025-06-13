@@ -2,5 +2,5 @@ namespace SK.Ext.Models.History;
 
 public record CompletionMessage
 {
-    public required AgentIdentity Identity { get; init; }
+    public required ParticipantIdentity Identity { get; init; }
 }

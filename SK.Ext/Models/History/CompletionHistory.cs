@@ -14,21 +14,21 @@ public class CompletionHistory
 
         Messages = [new CompletionText
         {
-            Identity = AgentIdentity.User,
+            Identity = ParticipantIdentity.User,
             Content = userMessage
         }];
     }
 
     // <summary>
-    // Creates a copy of the completion history for a specific agent identity.
-    // The messages in the history will be updated to reflect the role of the specified agent.
-    // If the agent identity's role is User, the messages will be updated to have the User role for that agent. Other messages will be updated to have the Assistant role.
-    // If the agent identity's role is Assistant, the messages will be updated to have the Assistant role for that agent. Other messages will be updated to have the User role.
-    // If the agent identity's role is neither User nor Assistant, an exception will be thrown.
+    // Creates a copy of the completion history for a specific identity.
+    // The messages in the history will be updated to reflect the role of the specified identity.
+    // If the identity's role is User, the messages will be updated to have the User role for that identity. Other messages will be updated to have the Assistant role.
+    // If the identity's role is Assistant, the messages will be updated to have the Assistant role for that identity. Other messages will be updated to have the User role.
+    // If the identity's role is neither User nor Assistant, an exception will be thrown.
     // </summary>
-    public CompletionHistory ForAgent(AgentIdentity agentIdentity)
+    public CompletionHistory ForIdentity(ParticipantIdentity identity)
     {
-        ArgumentNullException.ThrowIfNull(agentIdentity);
+        ArgumentNullException.ThrowIfNull(identity);
 
         return new CompletionHistory
         {
@@ -38,20 +38,20 @@ public class CompletionHistory
             })]
         };
 
-        AgentIdentity UpdateRole(AgentIdentity identity)
+        ParticipantIdentity UpdateRole(ParticipantIdentity identity)
         {
-            if (agentIdentity.Role == CompletionRole.User)
+            if (identity.Role == CompletionRole.User)
             {
                 return identity with
                 {
-                    Role = identity.Name == agentIdentity.Name ? CompletionRole.User : CompletionRole.Assistant
+                    Role = identity.Name == identity.Name ? CompletionRole.User : CompletionRole.Assistant
                 };
             }
-            else if (agentIdentity.Role == CompletionRole.Assistant)
+            else if (identity.Role == CompletionRole.Assistant)
             {
                 return identity with
                 {
-                    Role = identity.Name == agentIdentity.Name ? CompletionRole.Assistant : CompletionRole.User
+                    Role = identity.Name == identity.Name ? CompletionRole.Assistant : CompletionRole.User
                 };
             }
             else

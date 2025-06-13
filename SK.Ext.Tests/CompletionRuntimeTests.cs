@@ -2,7 +2,6 @@ using FakeItEasy;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using SK.Ext.Models;
-using SK.Ext.Models.History;
 using SK.Ext.Models.Plugin;
 using SK.Ext.Models.Result;
 
@@ -11,7 +10,7 @@ namespace SK.Ext.Tests
     public class CompletionRuntimeTests
     {
         [Fact]
-        public async Task CompletionAgent_ReturnsTextResult_ForSimpleTextCompletion()
+        public async Task CompletionRuntime_ReturnsTextResult_ForSimpleTextCompletion()
         {
             // Arrange
             var fakeService = A.Fake<IChatCompletionService>();
@@ -51,7 +50,7 @@ namespace SK.Ext.Tests
         }
 
         [Fact]
-        public async Task CompletionAgent_ReturnsStructuredResult_ForStructuredOutput()
+        public async Task CompletionRuntime_ReturnsStructuredResult_ForStructuredOutput()
         {
             // Arrange
             var fakeService = A.Fake<IChatCompletionService>();
@@ -87,7 +86,7 @@ namespace SK.Ext.Tests
         }
 
         [Fact]
-        public async Task CompletionAgent_CallsPluginAndReturnsFunctionCall()
+        public async Task CompletionRuntime_CallsPluginAndReturnsFunctionCall()
         {
             // Arrange
             var fakeService = A.Fake<IChatCompletionService>();
@@ -139,7 +138,7 @@ namespace SK.Ext.Tests
         }
 
         [Fact]
-        public async Task CompletionAgent_UsesSeed_WhenEnabledInSettings()
+        public async Task CompletionRuntime_UsesSeed_WhenEnabledInSettings()
         {
             // Arrange
             var fakeService = A.Fake<IChatCompletionService>();
@@ -174,7 +173,7 @@ namespace SK.Ext.Tests
         }
 
         [Fact]
-        public async Task CompletionAgent_CallsPlugin_WhenPluginCallIsRequired()
+        public async Task CompletionRuntime_CallsPlugin_WhenPluginCallIsRequired()
         {
             // Arrange
             var fakeService = A.Fake<IChatCompletionService>();

@@ -7,7 +7,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace SK.Ext.Sample;
 
-public class AgentFullAnswerSample
+public class FullAnswerSample
 {
     public static async Task Run(string groqKey)
     {
@@ -41,11 +41,11 @@ public class AgentFullAnswerSample
                     isContinued = true;
                     context = context.AddMessages([new CompletionText
                     {
-                        Identity = AgentIdentity.Assistant,
+                        Identity = ParticipantIdentity.Assistant,
                         Content = content is TextResult textResult ? textResult.Text : string.Empty
                     }, new CompletionText
                     {
-                        Identity = AgentIdentity.User,
+                        Identity = ParticipantIdentity.User,
                         Content = "Continue the answer."
                     }]);
                 }
