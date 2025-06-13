@@ -26,6 +26,12 @@ public class CompletionContextBuilder
         return this;
     }
 
+    public CompletionContextBuilder WithHistoryMessages(IEnumerable<CompletionMessage> messages)
+    {
+        _history = _history.AddMessages(messages);
+        return this;
+    }
+
     public CompletionContextBuilder WithSettings(CompletionSettings settings)
     {
         _settings = settings;
