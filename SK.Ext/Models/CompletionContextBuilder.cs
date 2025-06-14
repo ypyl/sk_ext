@@ -6,7 +6,7 @@ namespace SK.Ext.Models;
 
 public class CompletionContextBuilder
 {
-    private CompletionHistory _history = new() { Messages = [] };
+    private CompletionHistory _history = new();
     private CompletionSettings _settings = new();
     private IEnumerable<ICompletionPlugin> _plugins = [];
     private CompletionSystemMessage _systemMessage = new() { Prompt = "You are a helpful assistant." };

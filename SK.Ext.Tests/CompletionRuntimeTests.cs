@@ -228,34 +228,34 @@ namespace SK.Ext.Tests
         public async Task CompletionRuntime_UsesSeed_WithDifferentMessageTypes()
         {
             // Arrange
-            var textMessage = new SK.Ext.Models.History.CompletionText
+            var textMessage = new Models.History.CompletionText
             {
-                Identity = new SK.Ext.Models.History.ParticipantIdentity { Name = "Assistant", Role = SK.Ext.Models.History.CompletionRole.Assistant },
+                Identity = new Models.History.ParticipantIdentity("Assistant", SK.Ext.Models.History.CompletionRole.Assistant),
                 Content = "This is a text message."
             };
 
             // Add a message with image content
             var imageBytes = new byte[] { 1, 2, 3, 4, 5 };
-            var imageMessage = new SK.Ext.Models.History.CompletionImage
+            var imageMessage = new Models.History.CompletionImage
             {
-                Identity = new SK.Ext.Models.History.ParticipantIdentity { Name = "Assistant", Role = SK.Ext.Models.History.CompletionRole.Assistant },
+                Identity = new Models.History.ParticipantIdentity("Assistant", SK.Ext.Models.History.CompletionRole.Assistant),
                 Data = imageBytes,
                 MimeType = "image/png"
             };
 
             // Add a message with audio content
             var audioBytes = new byte[] { 10, 20, 30 };
-            var audioMessage = new SK.Ext.Models.History.CompletionAudio
+            var audioMessage = new Models.History.CompletionAudio
             {
-                Identity = new SK.Ext.Models.History.ParticipantIdentity { Name = "Assistant", Role = SK.Ext.Models.History.CompletionRole.Assistant },
+                Identity = new Models.History.ParticipantIdentity("Assistant", SK.Ext.Models.History.CompletionRole.Assistant),
                 Data = audioBytes,
                 MimeType = "audio/wav"
             };
 
-            var context = new SK.Ext.Models.CompletionContextBuilder()
+            var context = new CompletionContextBuilder()
                 .WithInitialUserMessage("Hello!")
-                .WithHistoryMessages(new SK.Ext.Models.History.CompletionMessage[] { textMessage, imageMessage, audioMessage })
-                .WithSettings(new SK.Ext.Models.Settings.CompletionSettings { Seed = true })
+                .WithHistoryMessages(new Models.History.CompletionMessage[] { textMessage, imageMessage, audioMessage })
+                .WithSettings(new Models.Settings.CompletionSettings { Seed = true })
                 .Build();
 
             var fakeService = A.Fake<IChatCompletionService>();

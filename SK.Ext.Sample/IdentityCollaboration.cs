@@ -37,14 +37,14 @@ public class IdentityCollaboration
 
         var writerSystemMessage = @"You are a Writer AI. Your role is to write clear, comprehensive responses to user requests.
             Focus on accuracy, clarity, and addressing all aspects of the request. Consider previous conversation context when responding.";
-        var writerIdentity = new ParticipantIdentity { Name = "writer", Role = CompletionRole.Assistant };
+        var writerIdentity = new ParticipantIdentity("writer", CompletionRole.Assistant);
         var reviewerSystemMessage = @"You are a Reviewer AI. Your role is to review the writer's content and provide feedback.
             If the content is satisfactory, respond with 'APPROVED: ' followed by a brief explanation.
             If changes are needed, provide short one sentence specific suggestion for improvement.";
-        var reviewerIdentity = new ParticipantIdentity { Name = "rewiewer", Role = CompletionRole.Assistant };
+        var reviewerIdentity = new ParticipantIdentity("rewiewer", CompletionRole.Assistant);
         var finalizerSystemMessage = @"You are a Finalizator AI. Your role is to create a final, polished version based on the entire conversation history.
             Incorporate the best elements from the discussion and ensure the final response is comprehensive and well-structured.";
-        var finalizerIdentity = new ParticipantIdentity { Name = "finalizer", Role = CompletionRole.Assistant };
+        var finalizerIdentity = new ParticipantIdentity("finalizer", CompletionRole.Assistant);
         var context = new CompletionContextBuilder().WithInitialUserMessage("Explain the SOLID principles in software development with examples.").Build();
 
         context = await Run(runtime, writerIdentity, context, writerSystemMessage, cancellationToken);
@@ -56,7 +56,7 @@ public class IdentityCollaboration
         {
             context = await Run(runtime, reviewerIdentity, context, reviewerSystemMessage, cancellationToken);
 
-            if (context.History.Messages.OfType<CompletionText>().Last(x => x.Identity == reviewerIdentity).Content.StartsWith("APPROVED:", StringComparison.OrdinalIgnoreCase))
+            if (context.History.OfType<CompletionText>().Last(x => x.Identity == reviewerIdentity).Content.StartsWith("APPROVED:", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("\nReviewer approved the content!");
                 break;

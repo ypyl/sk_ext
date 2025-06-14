@@ -151,7 +151,7 @@ public class CompletionRuntime(IChatCompletionService chatCompletionService) : I
     private static ChatHistory MapCompletionHistoryToChatHistory(CompletionSystemMessage systemMessage, CompletionHistory history)
     {
         var chatHistory = new ChatHistory(systemMessage.Prompt);
-        foreach (var message in history.Messages)
+        foreach (var message in history)
         {
             if (message is CompletionFunctionCall functionCall)
             {
