@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
@@ -16,6 +17,10 @@ public class CompletionRuntime(IChatCompletionService chatCompletionService) : I
 {
     private readonly IChatCompletionService _chatCompletionService = chatCompletionService;
     private readonly Kernel _kernel = Kernel.CreateBuilder().Build();
+    private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+    };
 
     public async IAsyncEnumerable<IContentResult> Completion(CompletionContext context,
         [EnumeratorCancellation] CancellationToken token)
@@ -88,7 +93,7 @@ public class CompletionRuntime(IChatCompletionService chatCompletionService) : I
 
         if (structuredOutput && finalResult.Length > 0)
         {
-            var structuredResult = JsonSerializer.Deserialize<T>(finalResult.ToString());
+            var structuredResult = JsonSerializer.Deserialize<T>(finalResult.ToString(), _options);
             yield return new StructuredResult<T>()
             {
                 Result = structuredResult,
