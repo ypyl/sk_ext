@@ -5,7 +5,7 @@ namespace SK.Ext.Models.Result;
 /// Only when using <see cref="CompletionRuntime"/>
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public record StructuredResult<T> : IContentResult
+public record StructuredOutputResult<T> : IContentResult
 {
     public required T? Result { get; init; }
     public required DateTime? CreatedAt { get; init; }

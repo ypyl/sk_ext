@@ -17,6 +17,7 @@ public class CompletionRuntime(IChatCompletionService chatCompletionService) : I
 {
     private readonly IChatCompletionService _chatCompletionService = chatCompletionService;
     private readonly Kernel _kernel = Kernel.CreateBuilder().Build();
+
     private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
@@ -93,8 +94,27 @@ public class CompletionRuntime(IChatCompletionService chatCompletionService) : I
 
         if (structuredOutput && finalResult.Length > 0)
         {
-            var structuredResult = JsonSerializer.Deserialize<T>(finalResult.ToString(), _options);
-            yield return new StructuredResult<T>()
+            T? structuredResult = default;
+            StructuredOutputExceptionResult? exceptionResult = null;
+            try
+            {
+                structuredResult = JsonSerializer.Deserialize<T>(finalResult.ToString(), _options);
+            }
+            catch (Exception ex)
+            {
+                exceptionResult = new StructuredOutputExceptionResult
+                {
+                    Type = typeof(T).FullName,
+                    Exception = ex,
+                    Result = finalResult.ToString()
+                };
+            }
+            if (exceptionResult is not null)
+            {
+                yield return exceptionResult;
+                yield break;
+            }
+            yield return new StructuredOutputResult<T>
             {
                 Result = structuredResult,
                 IsStreamed = context.Settings.Stream,

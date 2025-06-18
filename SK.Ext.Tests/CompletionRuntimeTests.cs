@@ -80,7 +80,7 @@ namespace SK.Ext.Tests
 
             // Assert
             Assert.Contains(results, r => r is TextResult text && text.Text == structuredJson);
-            Assert.Contains(results, r => r is StructuredResult<StructuredData> s && s.Result != null && s.Result.name == "John" && s.Result.age == 30);
+            Assert.Contains(results, r => r is StructuredOutputResult<StructuredData> s && s.Result != null && s.Result.name == "John" && s.Result.age == 30);
             Assert.Contains(results, r => r is IterationResult);
             Assert.Equal(3, results.Count);
         }
