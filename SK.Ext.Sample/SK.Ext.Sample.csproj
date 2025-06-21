@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SK.Ext\SK.Ext.csproj" />
+    <ProjectReference Include="..\SK.Ext.Eval\SK.Ext.Eval.csproj" />
   </ItemGroup>
 
 </Project>

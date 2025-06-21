@@ -137,9 +137,7 @@ public class AsyncEnumerableExtentionsTests
 
     private async IAsyncEnumerable<int> EmptyAsyncEnumerable()
     {
-        if (false) // This ensures an empty enumerable
-            yield return 0;
-
         await Task.CompletedTask; // To make the method truly async
+        yield break;
     }
 }

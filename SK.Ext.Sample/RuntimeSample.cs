@@ -11,7 +11,7 @@ public class RuntimeSample
     {
         using var ollamaClient = new OllamaApiClient(
             uriString: "http://localhost:11434",    // E.g. "http://localhost:11434" if Ollama has been started in docker as described above.
-            defaultModel: "gemma3:1b" // E.g. "phi3" if phi3 was downloaded as described above.
+            defaultModel: "gemma3:4b" // E.g. "phi3" if phi3 was downloaded as described above.
         );
         // OpenAIChatCompletionService chatCompletionService = new(
         //    modelId: "llama-3.3-70b-versatile",

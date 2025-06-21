@@ -29,6 +29,7 @@ This repository contains C#/.NET extensions and utilities for Semantic Kernel, o
 - Use pattern matching and modern C# features where appropriate.
 - Keep methods short and focused.
 - **Use file-scoped namespaces for all C# files.**
+- **Always use primary constructors for classes when possible.**
 
 ## Testing
 - All new features and bug fixes must include or update unit tests in `SK.Ext.Tests/`.

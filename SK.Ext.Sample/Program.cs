@@ -2,7 +2,7 @@
 
 class Program
 {
-    const string defaultSample = "identity-collaboration";
+    const string defaultSample = "eval-runtime";
 
     static async Task Main(string[] args)
     {
@@ -57,6 +57,9 @@ class Program
                 break;
             case "collab2":
                 await CollaborationSample.Run(GroqConfig.Key, "Explain the SOLID principles in software development with examples.", default);
+                break;
+            case "eval-runtime":
+                await EvaluateRuntimeSample.Run(GroqConfig.Key);
                 break;
             default:
                 Console.WriteLine($"Unknown sample: {sampleName}");
