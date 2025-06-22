@@ -49,7 +49,7 @@ public class EvaluateRuntimeSample
 
         // Evaluate
         var evaluator = new Evaluator(ollamaClient);
-        var evalResult = await evaluator.Run(scenarioName);
+        var evalResult = await evaluator.Run(scenarioName, default);
         Console.WriteLine($"\nEvaluation: Failed={evalResult.Failed}, Rating={evalResult.Rating}, Reason={evalResult.Reason}");
     }
 }

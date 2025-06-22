@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.AI;
 using Microsoft.Extensions.AI.Evaluation;
 using Microsoft.Extensions.AI.Evaluation.Quality;
+using Microsoft.Extensions.AI.Evaluation.Reporting;
+using Microsoft.Extensions.AI.Evaluation.Reporting.Storage;
 using SK.Ext.Models.History;
 using System.Text.Json;
 
@@ -16,6 +18,8 @@ public class Evaluator(IChatClient chatClient)
     {
         return new ChatConfiguration(chatClient);
     }
+
+    private static string ExecutionName => $"{DateTime.Now:yyyyMMddTHHmmss}";
 
     private static ChatMessage MapToChatMessage(CompletionText completionText)
         => new(MapCompletionRoleToChatRole(completionText.Identity), completionText.Content);
@@ -59,7 +63,7 @@ public class Evaluator(IChatClient chatClient)
     /// </summary>
     /// <param name="scenarioName">The name of the scenario (subfolder under Scenario).</param>
     /// <returns>The evaluation result.</returns>
-    public async Task<EvalResult> Run(string scenarioName)
+    public async Task<EvalResult> Run(string scenarioName, CancellationToken cancellationToken)
     {
         LoadScenario(scenarioName);
 
@@ -77,15 +81,24 @@ public class Evaluator(IChatClient chatClient)
         var responseMessage = new ChatResponse(MapToChatMessage(loadedResponse));
 
         var coherenceEvaluator = new CoherenceEvaluator();
-        EvaluationResult result = await coherenceEvaluator.EvaluateAsync(
-            chatMessages,
-            responseMessage,
-            GetChatConfiguration());
+
+        ReportingConfiguration reportingConfiguration =
+            DiskBasedReportingConfiguration.Create(
+                storageRootPath: "Scenario",
+                evaluators: [coherenceEvaluator],
+                chatConfiguration: GetChatConfiguration(),
+                enableResponseCaching: true,
+                executionName: ExecutionName);
+
+         await using ScenarioRun scenarioRun =
+            await reportingConfiguration.CreateScenarioRunAsync(
+                scenarioName);
 
         /// Retrieve the score for coherence from the <see cref="EvaluationResult"/>.
-        NumericMetric coherence = result.Get<NumericMetric>(CoherenceEvaluator.CoherenceMetricName);
+        var result = await scenarioRun.EvaluateAsync(chatMessages, responseMessage, cancellationToken: cancellationToken); ;
 
         // Extract relevant values from the coherence metric.
+        NumericMetric coherence = result.Get<NumericMetric>(CoherenceEvaluator.CoherenceMetricName);
         var interpretationFailed = coherence.Interpretation?.Failed ?? false;
         var rating = coherence.Interpretation?.Rating switch
         {
