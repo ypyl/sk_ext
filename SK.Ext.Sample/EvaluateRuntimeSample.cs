@@ -43,9 +43,13 @@ public class EvaluateRuntimeSample
             return;
         }
 
+        // Store scenario
+        var scenarioName = "SampleScenario";
+        Evaluator.StoreScenario(scenarioName, context.SystemMessage, context.History.OfType<CompletionText>(), responseText);
+
         // Evaluate
         var evaluator = new Evaluator(ollamaClient);
-        var evalResult = await evaluator.Eval(context.History.OfType<CompletionText>(), responseText);
+        var evalResult = await evaluator.Run(scenarioName);
         Console.WriteLine($"\nEvaluation: Failed={evalResult.Failed}, Rating={evalResult.Rating}, Reason={evalResult.Reason}");
     }
 }
