@@ -82,15 +82,18 @@ public class Evaluator(IChatClient chatClient)
 
         var coherenceEvaluator = new CoherenceEvaluator();
 
-        ReportingConfiguration reportingConfiguration =
-            DiskBasedReportingConfiguration.Create(
-                storageRootPath: "Scenario",
-                evaluators: [coherenceEvaluator],
-                chatConfiguration: GetChatConfiguration(),
-                enableResponseCaching: true,
-                executionName: ExecutionName);
+        var resultStore = new DiskBasedResultStore("Scenario");
+        IEvaluationResponseCacheProvider responseCacheProvider = new DiskBasedResponseCacheProvider("Scenario", null);
+        ReportingConfiguration reportingConfiguration = new ReportingConfiguration(
+            [coherenceEvaluator],
+            resultStore,
+            GetChatConfiguration(),
+            responseCacheProvider,
+            null, // cachingKeys
+            ExecutionName
+        );
 
-         await using ScenarioRun scenarioRun =
+        await using ScenarioRun scenarioRun =
             await reportingConfiguration.CreateScenarioRunAsync(
                 scenarioName);
 
@@ -110,31 +113,6 @@ public class Evaluator(IChatClient chatClient)
         };
 
         return new EvalResult(interpretationFailed, rating, coherence.Reason);
-    }
-
-    /// <summary>
-    /// Stores the provided messages, system message, and response as scenario files in the Scenario/<scenarioName>/Input folder.
-    /// </summary>
-    /// <param name="scenarioName">The name of the scenario (subfolder under Scenario).</param>
-    /// <param name="systemMessage">The system message to serialize to system.json.</param>
-    /// <param name="messages">The messages to serialize to messages.json.</param>
-    /// <param name="response">The response to serialize to response.json.</param>
-    public static void StoreScenario(string scenarioName, CompletionSystemMessage systemMessage, IEnumerable<CompletionText> messages, CompletionText response)
-    {
-        var scenarioInputPath = Path.Combine("Scenario", scenarioName, "Input");
-        Directory.CreateDirectory(scenarioInputPath);
-
-        var messagesPath = Path.Combine(scenarioInputPath, "messages.json");
-        var responsePath = Path.Combine(scenarioInputPath, "response.json");
-        var systemPath = Path.Combine(scenarioInputPath, "system.json");
-
-        var messagesJson = JsonSerializer.Serialize(messages, new JsonSerializerOptions { WriteIndented = true });
-        var responseJson = JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
-        var systemJson = JsonSerializer.Serialize(systemMessage, new JsonSerializerOptions { WriteIndented = true });
-
-        File.WriteAllText(messagesPath, messagesJson);
-        File.WriteAllText(responsePath, responseJson);
-        File.WriteAllText(systemPath, systemJson);
     }
 
     private static ChatRole MapCompletionRoleToChatRole(ParticipantIdentity identity)

@@ -45,7 +45,7 @@ public class EvaluateRuntimeSample
 
         // Store scenario
         var scenarioName = "SampleScenario";
-        Evaluator.StoreScenario(scenarioName, context.SystemMessage, context.History.OfType<CompletionText>(), responseText);
+        ScenarioInputStorage.StoreScenario(scenarioName, context.SystemMessage, context.History.OfType<CompletionText>(), responseText);
 
         // Evaluate
         var evaluator = new Evaluator(ollamaClient);
