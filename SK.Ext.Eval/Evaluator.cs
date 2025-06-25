@@ -73,7 +73,7 @@ public class Evaluator(IChatClient chatClient)
         // Create a chat history from the system message and provided messages.
         var chatMessages = new List<ChatMessage>
         {
-            new ChatMessage(ChatRole.System, loadedSystemMessage.Prompt)
+            new(ChatRole.System, loadedSystemMessage.Prompt)
         };
         chatMessages.AddRange(loadedMessages.Select(m => MapToChatMessage(m)));
 
@@ -84,7 +84,7 @@ public class Evaluator(IChatClient chatClient)
 
         var resultStore = new DiskBasedResultStore("Scenario");
         IEvaluationResponseCacheProvider responseCacheProvider = new DiskBasedResponseCacheProvider("Scenario", null);
-        ReportingConfiguration reportingConfiguration = new ReportingConfiguration(
+        ReportingConfiguration reportingConfiguration = new(
             [coherenceEvaluator],
             resultStore,
             GetChatConfiguration(),
@@ -93,12 +93,10 @@ public class Evaluator(IChatClient chatClient)
             ExecutionName
         );
 
-        await using ScenarioRun scenarioRun =
-            await reportingConfiguration.CreateScenarioRunAsync(
-                scenarioName);
+        await using ScenarioRun scenarioRun = await reportingConfiguration.CreateScenarioRunAsync(scenarioName, cancellationToken: cancellationToken);
 
         /// Retrieve the score for coherence from the <see cref="EvaluationResult"/>.
-        var result = await scenarioRun.EvaluateAsync(chatMessages, responseMessage, cancellationToken: cancellationToken); ;
+        var result = await scenarioRun.EvaluateAsync(chatMessages, responseMessage, cancellationToken: cancellationToken);
 
         // Extract relevant values from the coherence metric.
         NumericMetric coherence = result.Get<NumericMetric>(CoherenceEvaluator.CoherenceMetricName);

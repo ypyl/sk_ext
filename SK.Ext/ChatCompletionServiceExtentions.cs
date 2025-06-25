@@ -301,7 +301,7 @@ public static class ChatCompletionServiceExtentions
                         CreatedAt = ParseWithDefault(syncedCallResult.Metadata?["CreatedAt"]?.ToString()),
                         SystemFingerprint = MetadataInfo(syncedCallResult.Metadata, "SystemFingerprint"),
                         Model = syncedCallResult.ModelId,
-                        IsStreamed = true
+                        IsStreamed = false
                     };
                 }
                 var outputTokens = GetOutputTokensFromMetadata(syncedCallResult.Metadata);
