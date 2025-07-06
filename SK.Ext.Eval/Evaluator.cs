@@ -33,7 +33,13 @@ public class Evaluator(IChatClient chatClient)
         Exceptional
     }
 
-    public record EvalResult(bool Failed, EvalRating Rating, string? Reason);
+    public enum EvalType
+    {
+        Coherence,
+        Relevance
+    }
+
+    public record EvalResult(EvalType Type, bool Failed, EvalRating Rating, string? Reason);
 
     /// <summary>
     /// Loads scenario data from the Scenario folder for the given scenario name.
@@ -63,7 +69,7 @@ public class Evaluator(IChatClient chatClient)
     /// </summary>
     /// <param name="scenarioName">The name of the scenario (subfolder under Scenario).</param>
     /// <returns>The evaluation result.</returns>
-    public async Task<EvalResult> Run(string scenarioName, CancellationToken cancellationToken)
+    public async Task<EvalResult[]> Run(string scenarioName, CancellationToken cancellationToken)
     {
         LoadScenario(scenarioName);
 
@@ -80,12 +86,13 @@ public class Evaluator(IChatClient chatClient)
         // Create a response from the provided response text.
         var responseMessage = new ChatResponse(MapToChatMessage(loadedResponse));
 
-        var coherenceEvaluator = new CoherenceEvaluator();
+        IEvaluator coherenceEvaluator = new CoherenceEvaluator();
+        IEvaluator relevanceEvaluator = new RelevanceEvaluator();
 
         var resultStore = new DiskBasedResultStore("Scenario");
         IEvaluationResponseCacheProvider responseCacheProvider = new DiskBasedResponseCacheProvider("Scenario", null);
         ReportingConfiguration reportingConfiguration = new(
-            [coherenceEvaluator],
+            [relevanceEvaluator, coherenceEvaluator],
             resultStore,
             GetChatConfiguration(),
             responseCacheProvider,
@@ -95,13 +102,14 @@ public class Evaluator(IChatClient chatClient)
 
         await using ScenarioRun scenarioRun = await reportingConfiguration.CreateScenarioRunAsync(scenarioName, cancellationToken: cancellationToken);
 
-        /// Retrieve the score for coherence from the <see cref="EvaluationResult"/>.
+        // Retrieve the score for coherence and relevance from the EvaluationResult.
         var result = await scenarioRun.EvaluateAsync(chatMessages, responseMessage, cancellationToken: cancellationToken);
 
-        // Extract relevant values from the coherence metric.
         NumericMetric coherence = result.Get<NumericMetric>(CoherenceEvaluator.CoherenceMetricName);
-        var interpretationFailed = coherence.Interpretation?.Failed ?? false;
-        var rating = coherence.Interpretation?.Rating switch
+        NumericMetric relevance = result.Get<NumericMetric>(RelevanceEvaluator.RelevanceMetricName);
+
+        var interpretationFailedCoherence = coherence.Interpretation?.Failed ?? false;
+        var ratingCoherence = coherence.Interpretation?.Rating switch
         {
             EvaluationRating.Exceptional => EvalRating.Exceptional,
             EvaluationRating.Good => EvalRating.Good,
@@ -110,7 +118,21 @@ public class Evaluator(IChatClient chatClient)
             _ => EvalRating.Unknown
         };
 
-        return new EvalResult(interpretationFailed, rating, coherence.Reason);
+        var interpretationFailedRelevance = relevance.Interpretation?.Failed ?? false;
+        var ratingRelevance = relevance.Interpretation?.Rating switch
+        {
+            EvaluationRating.Exceptional => EvalRating.Exceptional,
+            EvaluationRating.Good => EvalRating.Good,
+            EvaluationRating.Average => EvalRating.Fair,
+            EvaluationRating.Poor => EvalRating.Poor,
+            _ => EvalRating.Unknown
+        };
+
+        return new[]
+        {
+            new EvalResult(EvalType.Coherence, interpretationFailedCoherence, ratingCoherence, coherence.Reason),
+            new EvalResult(EvalType.Relevance, interpretationFailedRelevance, ratingRelevance, relevance.Reason)
+        };
     }
 
     private static ChatRole MapCompletionRoleToChatRole(ParticipantIdentity identity)
